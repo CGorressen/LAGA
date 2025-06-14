@@ -138,14 +138,18 @@
 
                             <!-- Kostenstellen -->
                             <MenuItem Header="Kostenstellen" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                          Click="KostenstelleHinzufuegen_Click"/>
+                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                          Click="KostenstellenAnzeigen_Click"/>
                             </MenuItem>
 
                             <!-- Lagerorte -->
                             <MenuItem Header="Lagerorte" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                          Click="LagerortHinzufuegen_Click"/>
+                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                          Click="LagerorteAnzeigen_Click"/>
                             </MenuItem>
 
                             <!-- Artikel -->

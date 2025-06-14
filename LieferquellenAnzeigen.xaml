@@ -25,7 +25,8 @@
             <Setter Property="SelectionMode" Value="Single"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="CanUserDeleteRows" Value="False"/>
-            <Setter Property="CanUserReorderColumns" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="True"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
             <Setter Property="CanUserResizeRows" Value="False"/>
             <Setter Property="RowBackground" Value="White"/>
             <Setter Property="AlternatingRowBackground" Value="#FFF5F5F5"/>
@@ -43,7 +44,7 @@
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="40"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="Padding" Value="8,0"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
@@ -106,19 +107,55 @@
 
                 <!-- Lieferquelle -->
                 <DataGridTextColumn Header="Lieferquelle" Binding="{Binding Bezeichnung}" 
-                                    Width="250" HeaderStyle="{StaticResource DataGridHeaderStyle}"/>
+                                    MinWidth="200" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding Bezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
 
                 <!-- E-Mail -->
                 <DataGridTextColumn Header="E-Mail" Binding="{Binding Email}" 
-                                    Width="200" HeaderStyle="{StaticResource DataGridHeaderStyle}"/>
+                                    MinWidth="180" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding Email}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
 
                 <!-- Telefon -->
                 <DataGridTextColumn Header="Telefon" Binding="{Binding Telefon}" 
-                                    Width="150" HeaderStyle="{StaticResource DataGridHeaderStyle}"/>
+                                    MinWidth="120" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding Telefon}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
 
                 <!-- Webseite -->
                 <DataGridTextColumn Header="Webseite" Binding="{Binding Webseite}" 
-                                    Width="*" HeaderStyle="{StaticResource DataGridHeaderStyle}"/>
+                                    MinWidth="150" Width="*" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding Webseite}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
             </DataGrid.Columns>
 
             <!-- Kontextmenü für Rechtsklick -->

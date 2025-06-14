@@ -33,7 +33,7 @@ namespace LAGA
             {
                 using (var context = new LagerContext())
                 {
-                    // Erstellt die Datenbank und Tabellen falls sie nicht existieren
+                    // Erstellt die Datenbank und alle Tabellen falls sie nicht existieren
                     await context.Database.EnsureCreatedAsync();
                 }
             }
@@ -64,6 +64,78 @@ namespace LAGA
 
             // Lädt den UserControl in den Haupt-Content-Bereich
             MainContentArea.Content = lieferquellenAnzeige;
+        }
+
+        /// <summary>
+        /// Öffnet das modale Fenster zum Hinzufügen einer neuen Kostenstelle
+        /// </summary>
+        private void KostenstelleHinzufuegen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var hinzufuegenFenster = new KostenstelleHinzufuegen();
+                hinzufuegenFenster.Owner = this;
+                hinzufuegenFenster.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen des Kostenstelle-Hinzufügen-Fensters: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Öffnet das modale Fenster zur Anzeige aller Kostenstellen
+        /// </summary>
+        private void KostenstellenAnzeigen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var kostenstellenAnzeige = new KostenstellenAnzeigen();
+                kostenstellenAnzeige.Owner = this;
+                kostenstellenAnzeige.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen des Kostenstellen-Anzeige-Fensters: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Öffnet das modale Fenster zum Hinzufügen eines neuen Lagerortes
+        /// </summary>
+        private void LagerortHinzufuegen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var hinzufuegenFenster = new LagerortHinzufuegen();
+                hinzufuegenFenster.Owner = this;
+                hinzufuegenFenster.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen des Lagerort-Hinzufügen-Fensters: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Öffnet das modale Fenster zur Anzeige aller Lagerorte
+        /// </summary>
+        private void LagerorteAnzeigen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var lagerorteAnzeige = new LagerorteAnzeigen();
+                lagerorteAnzeige.Owner = this;
+                lagerorteAnzeige.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen des Lagerorte-Anzeige-Fensters: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

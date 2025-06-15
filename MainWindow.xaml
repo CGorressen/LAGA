@@ -163,7 +163,8 @@
                         </MenuItem>
 
                         <!-- Lagerbestand -->
-                        <MenuItem Header="Lagerbestand" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                        <MenuItem Header="Lagerbestand" Style="{StaticResource DarkSubMenuItemStyle}"
+                                  Click="LagerbestandAnzeigen_Click"/>
 
                         <!-- Warnungen -->
                         <MenuItem Header="Warnungen" Style="{StaticResource DarkSubMenuItemStyle}"/>

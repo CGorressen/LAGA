@@ -28,6 +28,12 @@ namespace LAGA
         public DbSet<Artikel> Artikel { get; set; }
 
         /// <summary>
+        /// Tabelle für ArtikelEinheiten in der Datenbank
+        /// Jeder Eintrag repräsentiert eine physische Einheit eines Artikels mit eindeutigem Barcode
+        /// </summary>
+        public DbSet<ArtikelEinheit> ArtikelEinheiten { get; set; }
+
+        /// <summary>
         /// Konfiguriert die Datenbankverbindung zur SQLite-Datei "Lager.db"
         /// </summary>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -126,6 +132,28 @@ namespace LAGA
 
                 // Tabellenname in der Datenbank
                 entity.ToTable("Artikel");
+            });
+
+            // Konfiguration für ArtikelEinheit-Tabelle
+            modelBuilder.Entity<ArtikelEinheit>(entity =>
+            {
+                // Primärschlüssel mit Auto-Inkrement
+                entity.HasKey(ae => ae.Id);
+                entity.Property(ae => ae.Id).ValueGeneratedOnAdd();
+
+                // Barcode ist erforderlich, hat maximale Länge und muss eindeutig sein
+                entity.Property(ae => ae.Barcode).IsRequired().HasMaxLength(10);
+                entity.HasIndex(ae => ae.Barcode).IsUnique();
+
+                // Fremdschlüssel-Beziehung zu Artikel mit ON DELETE RESTRICT
+                // Verhindert das Löschen von Artikeln, solange noch Einheiten im Lager sind
+                entity.HasOne(ae => ae.Artikel)
+                    .WithMany()
+                    .HasForeignKey(ae => ae.ArtikelId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Tabellenname in der Datenbank
+                entity.ToTable("ArtikelEinheiten");
             });
         }
     }

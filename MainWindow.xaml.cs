@@ -171,5 +171,22 @@ namespace LAGA
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        /// <summary>
+        /// Zeigt die Lagerbestand-Anzeige im Haupt-Content-Bereich
+        /// </summary>
+        private void LagerbestandAnzeigen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var lagerbestandAnzeige = new LagerBestandAnzeigen();
+                MainContentArea.Content = lagerbestandAnzeige;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen der Lagerbestand-Anzeige: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

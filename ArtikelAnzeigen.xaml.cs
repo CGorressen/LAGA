@@ -65,7 +65,6 @@ namespace LAGA
                         Id = a.Id,
                         Bezeichnung = a.Bezeichnung,
                         KostenstelleBezeichnung = a.Kostenstelle?.Bezeichnung ?? "Unbekannt",
-                        EinheitBezeichnung = a.IstEinzelteil ? "Einzelteil" : "Karton mit Einzelteilen",
                         LagerortBezeichnung = a.Lagerort?.Bezeichnung ?? "Unbekannt",
                         LieferantBezeichnung = a.Lieferant?.Bezeichnung ?? "Unbekannt",
                         HerstellerBezeichnung = a.Hersteller?.Bezeichnung ?? "Unbekannt",
@@ -108,7 +107,7 @@ namespace LAGA
                 // Suche in allen Feldern des Artikels
                 return string.IsNullOrEmpty(suchtext) ||
                        artikel.Bezeichnung.ToLower().Contains(suchtext) ||
-                       artikel.EinheitBezeichnung.ToLower().Contains(suchtext) ||
+                       artikel.KostenstelleBezeichnung.ToLower().Contains(suchtext) ||
                        artikel.LagerortBezeichnung.ToLower().Contains(suchtext) ||
                        artikel.LieferantBezeichnung.ToLower().Contains(suchtext) ||
                        artikel.HerstellerBezeichnung.ToLower().Contains(suchtext);

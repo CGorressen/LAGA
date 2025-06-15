@@ -116,12 +116,12 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <!-- Einheit -->
-                <DataGridTextColumn Header="Einheit" Binding="{Binding EinheitBezeichnung}" 
+                <!-- Kostenstelle -->
+                <DataGridTextColumn Header="Kostenstelle" Binding="{Binding KostenstelleBezeichnung}" 
                                     MinWidth="150" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="ToolTip" Value="{Binding EinheitBezeichnung}"/>
+                            <Setter Property="ToolTip" Value="{Binding KostenstelleBezeichnung}"/>
                             <Setter Property="TextWrapping" Value="NoWrap"/>
                             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
                             <Setter Property="Padding" Value="8,4"/>

@@ -22,11 +22,6 @@ namespace LAGA
         public string KostenstelleBezeichnung { get; set; } = string.Empty;
 
         /// <summary>
-        /// Benutzerfreundliche Bezeichnung der Einheit
-        /// </summary>
-        public string EinheitBezeichnung { get; set; } = string.Empty;
-
-        /// <summary>
         /// Bezeichnung des Lagerortes (statt LagerortId)
         /// </summary>
         public string LagerortBezeichnung { get; set; } = string.Empty;

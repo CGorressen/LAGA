@@ -1,0 +1,191 @@
+﻿<UserControl x:Class="LAGA.ArtikelAnzeigen"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <!-- Style für die Suchbox -->
+        <Style x:Key="SearchBoxStyle" TargetType="TextBox">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="BorderBrush" Value="#CCCCCC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- Style für DataGrid -->
+        <Style x:Key="DataGridStyle" TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="True"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#FFF5F5F5"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- Style für DataGrid Header -->
+        <Style x:Key="DataGridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#FF404040"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Style für Schließen-Button -->
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF404040"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Width" Value="120"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Titel -->
+        <TextBlock Grid.Row="0" Text="Artikel" FontSize="18" FontWeight="Bold" 
+                   Margin="0,0,0,15"/>
+
+        <!-- Suchbereich -->
+        <Grid Grid.Row="1" Margin="0,0,0,15">
+            <TextBox x:Name="txtSuche" Style="{StaticResource SearchBoxStyle}"
+                     TextChanged="TxtSuche_TextChanged"/>
+            <TextBlock Text="Suche..." Foreground="Gray" Margin="10,0,0,0"
+                       VerticalAlignment="Center" IsHitTestVisible="False"
+                       FontFamily="Segoe UI" FontSize="12"
+                       TextOptions.TextFormattingMode="Display"
+                       TextOptions.TextRenderingMode="ClearType">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ElementName=txtSuche, Path=Text}" Value="">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <!-- DataGrid für Artikel -->
+        <DataGrid x:Name="dgArtikel" Grid.Row="2" 
+                  Style="{StaticResource DataGridStyle}"
+                  MouseRightButtonUp="DgArtikel_MouseRightButtonUp">
+
+            <DataGrid.Columns>
+                <!-- Versteckte ID-Spalte für interne Verwendung -->
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Visibility="Collapsed"/>
+
+                <!-- Artikelbezeichnung -->
+                <DataGridTextColumn Header="Artikelbezeichnung" Binding="{Binding Bezeichnung}" 
+                                    MinWidth="200" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding Bezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Kostenstelle -->
+                <DataGridTextColumn Header="Kostenstelle" Binding="{Binding KostenstelleBezeichnung}" 
+                                    MinWidth="150" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding KostenstelleBezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Lagerort -->
+                <DataGridTextColumn Header="Lagerort" Binding="{Binding LagerortBezeichnung}" 
+                                    MinWidth="120" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding LagerortBezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Lieferant -->
+                <DataGridTextColumn Header="Lieferant" Binding="{Binding LieferantBezeichnung}" 
+                                    MinWidth="180" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding LieferantBezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Hersteller -->
+                <DataGridTextColumn Header="Hersteller" Binding="{Binding HerstellerBezeichnung}" 
+                                    MinWidth="180" Width="*" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding HerstellerBezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+
+            <!-- Kontextmenü für Rechtsklick -->
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Bearbeiten" Click="MenuItemBearbeiten_Click"/>
+                    <MenuItem Header="Löschen" Click="MenuItemLoeschen_Click"/>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+
+        </DataGrid>
+
+        <!-- Button-Bereich -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left" 
+                    Margin="0,15,0,0">
+            <Button x:Name="btnAnsichtSchliessen" Content="Ansicht schließen"
+                    Style="{StaticResource CloseButtonStyle}"
+                    Click="BtnAnsichtSchliessen_Click"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

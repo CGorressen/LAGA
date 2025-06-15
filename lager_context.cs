@@ -23,6 +23,11 @@ namespace LAGA
         public DbSet<Lagerort> Lagerorte { get; set; }
 
         /// <summary>
+        /// Tabelle für Artikel in der Datenbank
+        /// </summary>
+        public DbSet<Artikel> Artikel { get; set; }
+
+        /// <summary>
         /// Konfiguriert die Datenbankverbindung zur SQLite-Datei "Lager.db"
         /// </summary>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -81,6 +86,46 @@ namespace LAGA
 
                 // Tabellenname in der Datenbank
                 entity.ToTable("Lagerorte");
+            });
+
+            // Konfiguration für Artikel-Tabelle
+            modelBuilder.Entity<Artikel>(entity =>
+            {
+                // Primärschlüssel mit Auto-Inkrement
+                entity.HasKey(a => a.Id);
+                entity.Property(a => a.Id).ValueGeneratedOnAdd();
+
+                // Textfelder mit Längen-Begrenzungen
+                entity.Property(a => a.Bezeichnung).IsRequired().HasMaxLength(200);
+                entity.Property(a => a.ExterneArtikelIdLieferant).IsRequired().HasMaxLength(100);
+                entity.Property(a => a.ExterneArtikelIdHersteller).IsRequired().HasMaxLength(100);
+
+                // Eindeutige Artikelbezeichnung (UNIQUE Constraint)
+                entity.HasIndex(a => a.Bezeichnung).IsUnique();
+
+                // Fremdschlüssel-Beziehungen mit ON DELETE RESTRICT
+                entity.HasOne(a => a.Lieferant)
+                    .WithMany()
+                    .HasForeignKey(a => a.LieferantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.Hersteller)
+                    .WithMany()
+                    .HasForeignKey(a => a.HerstellerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.Kostenstelle)
+                    .WithMany()
+                    .HasForeignKey(a => a.KostenstelleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(a => a.Lagerort)
+                    .WithMany()
+                    .HasForeignKey(a => a.LagerortId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Tabellenname in der Datenbank
+                entity.ToTable("Artikel");
             });
         }
     }

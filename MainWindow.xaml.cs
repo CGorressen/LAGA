@@ -137,5 +137,39 @@ namespace LAGA
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        /// <summary>
+        /// Zeigt die Artikel-Hinzufügen-Ansicht im Haupt-Content-Bereich
+        /// </summary>
+        private void ArtikelHinzufuegen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var artikelHinzufuegen = new ArtikelHinzufuegen();
+                MainContentArea.Content = artikelHinzufuegen;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen der Artikel-Hinzufügen-Ansicht: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Zeigt die Artikel-Anzeige im Haupt-Content-Bereich
+        /// </summary>
+        private void ArtikelAnzeigen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var artikelAnzeige = new ArtikelAnzeigen();
+                MainContentArea.Content = artikelAnzeige;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen der Artikel-Anzeige: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

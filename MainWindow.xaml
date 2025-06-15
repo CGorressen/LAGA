@@ -154,8 +154,10 @@
 
                             <!-- Artikel -->
                             <MenuItem Header="Artikel" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                          Click="ArtikelHinzufuegen_Click"/>
+                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                          Click="ArtikelAnzeigen_Click"/>
                             </MenuItem>
 
                         </MenuItem>

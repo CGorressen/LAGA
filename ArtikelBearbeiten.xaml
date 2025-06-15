@@ -26,6 +26,7 @@
             <Setter Property="Margin" Value="0,5,0,15"/>
             <Setter Property="Height" Value="35"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="#CCCCCC"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
@@ -55,106 +56,108 @@
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Titel -->
-        <TextBlock Grid.Row="0" Text="Artikel bearbeiten" FontSize="18" FontWeight="Bold" 
-                   Margin="0,0,0,20"/>
-
-        <!-- Eingabefelder -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <!-- ScrollViewer für alle Eingabefelder -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="300"/>
                     <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="300"/>
                     <ColumnDefinition Width="20"/>
-                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="200"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0">
+                <!-- Bezeichnung - Zeile 0, über alle Spalten (schreibgeschützt) -->
+                <Label Grid.Row="0" Grid.Column="0" Content="Bezeichnung" Style="{StaticResource InputLabelStyle}"/>
+                <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" x:Name="txtBezeichnung" 
+                         Style="{StaticResource ReadOnlyTextBoxStyle}"/>
 
-                    <!-- Bezeichnung (schreibgeschützt) -->
-                    <Label Content="Bezeichnung" Style="{StaticResource InputLabelStyle}"/>
-                    <TextBox x:Name="txtBezeichnung" Style="{StaticResource ReadOnlyTextBoxStyle}"/>
+                <!-- Zeile 2: Lieferant, Hersteller, Lieferzeit -->
+                <Label Grid.Row="2" Grid.Column="0" Content="Lieferant" Style="{StaticResource InputLabelStyle}"/>
+                <Label Grid.Row="2" Grid.Column="2" Content="Hersteller" Style="{StaticResource InputLabelStyle}"/>
+                <Label Grid.Row="2" Grid.Column="4" Content="Lieferzeit (Tage)" Style="{StaticResource InputLabelStyle}"/>
 
-                    <!-- Lieferant -->
-                    <Label Content="Lieferant" Style="{StaticResource InputLabelStyle}"/>
-                    <ComboBox x:Name="cmbLieferant" Style="{StaticResource InputComboBoxStyle}"
-                              DisplayMemberPath="Bezeichnung" SelectedValuePath="Id"
-                              SelectionChanged="InputField_Changed"/>
+                <!-- Zeile 3: Dropdowns -->
+                <ComboBox Grid.Row="3" Grid.Column="0" x:Name="cmbLieferant" Style="{StaticResource InputComboBoxStyle}"
+                          DisplayMemberPath="Bezeichnung" SelectedValuePath="Id" SelectionChanged="InputField_Changed"/>
+                <ComboBox Grid.Row="3" Grid.Column="2" x:Name="cmbHersteller" Style="{StaticResource InputComboBoxStyle}"
+                          DisplayMemberPath="Bezeichnung" SelectedValuePath="Id" SelectionChanged="InputField_Changed"/>
+                <ComboBox Grid.Row="3" Grid.Column="4" x:Name="cmbLieferzeit" Style="{StaticResource InputComboBoxStyle}"
+                          SelectionChanged="InputField_Changed"/>
 
-                    <!-- Externe Artikel ID (Lieferant) -->
-                    <Label Content="Externe Lieferanten ID" Style="{StaticResource InputLabelStyle}"/>
-                    <TextBox x:Name="txtExterneArtikelIdLieferant" Style="{StaticResource InputTextBoxStyle}"
-                             TextChanged="InputField_Changed"/>
+                <!-- Zeile 4: Weitere Felder -->
+                <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="5" Margin="0,20,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="200"/>
+                    </Grid.ColumnDefinitions>
 
-                </StackPanel>
+                    <!-- Externe IDs und Einheit -->
+                    <Label Grid.Row="0" Grid.Column="0" Content="Externe Lieferanten ID" Style="{StaticResource InputLabelStyle}"/>
+                    <Label Grid.Row="0" Grid.Column="2" Content="Externe Hersteller ID" Style="{StaticResource InputLabelStyle}"/>
+                    <Label Grid.Row="0" Grid.Column="4" Content="Einheit" Style="{StaticResource InputLabelStyle}"/>
 
-                <StackPanel Grid.Column="2">
+                    <TextBox Grid.Row="1" Grid.Column="0" x:Name="txtExterneArtikelIdLieferant" 
+                             Style="{StaticResource InputTextBoxStyle}" TextChanged="InputField_Changed"/>
+                    <TextBox Grid.Row="1" Grid.Column="2" x:Name="txtExterneArtikelIdHersteller" 
+                             Style="{StaticResource InputTextBoxStyle}" TextChanged="InputField_Changed"/>
 
-                    <!-- Hersteller -->
-                    <Label Content="Hersteller" Style="{StaticResource InputLabelStyle}"/>
-                    <ComboBox x:Name="cmbHersteller" Style="{StaticResource InputComboBoxStyle}"
-                              DisplayMemberPath="Bezeichnung" SelectedValuePath="Id"
-                              SelectionChanged="InputField_Changed"/>
+                    <StackPanel Grid.Row="1" Grid.Column="4" Margin="0,5,0,0">
+                        <CheckBox x:Name="chkKartonMitEinzelteilen" Content="Karton mit mehreren Einzelteilen" 
+                                  Style="{StaticResource InputCheckBoxStyle}" Checked="Einheit_Changed" Unchecked="Einheit_Changed"/>
+                        <CheckBox x:Name="chkEinzelteil" Content="Einzelteil" 
+                                  Style="{StaticResource InputCheckBoxStyle}" Checked="Einheit_Changed" Unchecked="Einheit_Changed"/>
+                    </StackPanel>
 
-                    <!-- Lieferzeit -->
-                    <Label Content="Lieferzeit (Tage)" Style="{StaticResource InputLabelStyle}"/>
-                    <ComboBox x:Name="cmbLieferzeit" Style="{StaticResource InputComboBoxStyle}"
-                              SelectionChanged="InputField_Changed"/>
+                    <!-- Kostenstelle und Lagerort -->
+                    <Label Grid.Row="2" Grid.Column="0" Content="Kostenstelle" Style="{StaticResource InputLabelStyle}"/>
+                    <Label Grid.Row="2" Grid.Column="2" Content="Lagerort" Style="{StaticResource InputLabelStyle}"/>
 
-                    <!-- Externe Artikel ID (Hersteller) -->
-                    <Label Content="Externe Hersteller ID" Style="{StaticResource InputLabelStyle}"/>
-                    <TextBox x:Name="txtExterneArtikelIdHersteller" Style="{StaticResource InputTextBoxStyle}"
-                             TextChanged="InputField_Changed"/>
+                    <ComboBox Grid.Row="3" Grid.Column="0" x:Name="cmbKostenstelle" Style="{StaticResource InputComboBoxStyle}"
+                              DisplayMemberPath="Bezeichnung" SelectedValuePath="Id" SelectionChanged="InputField_Changed"/>
+                    <ComboBox Grid.Row="3" Grid.Column="2" x:Name="cmbLagerort" Style="{StaticResource InputComboBoxStyle}"
+                              DisplayMemberPath="Bezeichnung" SelectedValuePath="Id" SelectionChanged="InputField_Changed"/>
 
-                </StackPanel>
+                    <!-- Mindest- und Maximalbestand nebeneinander ganz unten -->
+                    <Label Grid.Row="6" Grid.Column="0" Content="Mindestbestand" Style="{StaticResource InputLabelStyle}"/>
+                    <Label Grid.Row="6" Grid.Column="2" Content="Maximalbestand" Style="{StaticResource InputLabelStyle}"/>
 
-                <StackPanel Grid.Column="4">
-
-                    <!-- Kostenstelle -->
-                    <Label Content="Kostenstelle" Style="{StaticResource InputLabelStyle}"/>
-                    <ComboBox x:Name="cmbKostenstelle" Style="{StaticResource InputComboBoxStyle}"
-                              DisplayMemberPath="Bezeichnung" SelectedValuePath="Id"
-                              SelectionChanged="InputField_Changed"/>
-
-                    <!-- Lagerort -->
-                    <Label Content="Lagerort" Style="{StaticResource InputLabelStyle}"/>
-                    <ComboBox x:Name="cmbLagerort" Style="{StaticResource InputComboBoxStyle}"
-                              DisplayMemberPath="Bezeichnung" SelectedValuePath="Id"
-                              SelectionChanged="InputField_Changed"/>
-
-                    <!-- Einheit -->
-                    <Label Content="Einheit" Style="{StaticResource InputLabelStyle}"/>
-                    <CheckBox x:Name="chkKartonMitEinzelteilen" Content="Karton mit mehreren Einzelteilen" 
-                              Style="{StaticResource InputCheckBoxStyle}"
-                              Checked="Einheit_Changed" Unchecked="Einheit_Changed"/>
-                    <CheckBox x:Name="chkEinzelteil" Content="Einzelteil" 
-                              Style="{StaticResource InputCheckBoxStyle}"
-                              Checked="Einheit_Changed" Unchecked="Einheit_Changed"/>
-
-                    <!-- Mindestbestand -->
-                    <Label Content="Mindestbestand" Style="{StaticResource InputLabelStyle}"/>
-                    <TextBox x:Name="txtMindestbestand" Style="{StaticResource InputTextBoxStyle}"
-                             TextChanged="InputField_Changed"/>
-
-                    <!-- Maximalbestand -->
-                    <Label Content="Maximalbestand" Style="{StaticResource InputLabelStyle}"/>
-                    <TextBox x:Name="txtMaximalbestand" Style="{StaticResource InputTextBoxStyle}"
-                             TextChanged="InputField_Changed"/>
-
-                </StackPanel>
+                    <TextBox Grid.Row="7" Grid.Column="0" x:Name="txtMindestbestand" 
+                             Style="{StaticResource InputTextBoxStyle}" TextChanged="InputField_Changed"/>
+                    <TextBox Grid.Row="7" Grid.Column="2" x:Name="txtMaximalbestand" 
+                             Style="{StaticResource InputTextBoxStyle}" TextChanged="InputField_Changed"/>
+                </Grid>
 
             </Grid>
         </ScrollViewer>
 
         <!-- Button-Bereich -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" 
-                    Margin="0,20,0,0">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" 
+                    HorizontalAlignment="Right" Margin="0,20,0,0">
 
             <!-- Speichern Button (dunkelgrau, zunächst deaktiviert) -->
             <Button x:Name="btnSpeichern" Content="Speichern" 

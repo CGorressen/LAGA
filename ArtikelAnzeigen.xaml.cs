@@ -207,6 +207,23 @@ namespace LAGA
         }
 
         /// <summary>
+        /// Öffnet das Hinzufügen-Fenster für einen neuen Artikel
+        /// </summary>
+        private void BtnHinzufuegen_Click(object sender, RoutedEventArgs e)
+        {
+            // Artikel-Hinzufügen-Fenster als modalen Dialog öffnen
+            var hinzufuegenFenster = new ArtikelHinzufuegenDialog();
+            hinzufuegenFenster.Owner = Window.GetWindow(this);
+
+            // Nach dem Schließen des Hinzufügen-Fensters prüfen ob erfolgreich gespeichert
+            if (hinzufuegenFenster.ShowDialog() == true)
+            {
+                // Daten neu laden um neuen Artikel anzuzeigen
+                LoadArtikelAsync();
+            }
+        }
+
+        /// <summary>
         /// Schließt die Artikel-Ansicht
         /// </summary>
         private void BtnAnsichtSchliessen_Click(object sender, RoutedEventArgs e)

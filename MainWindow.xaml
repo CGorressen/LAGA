@@ -129,36 +129,20 @@
                         <MenuItem Header="Datenbank" Style="{StaticResource DarkSubMenuItemStyle}">
 
                             <!-- Lieferquellen -->
-                            <MenuItem Header="Lieferquellen" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}" 
-                                          Click="LieferquelleHinzufuegen_Click"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}" 
-                                          Click="LieferquellenAnzeigen_Click"/>
-                            </MenuItem>
+                            <MenuItem Header="Lieferquellen" Style="{StaticResource DarkSubMenuItemStyle}" 
+                                      Click="LieferquellenAnzeigen_Click"/>
 
-                            <!-- Kostenstellen -->
-                            <MenuItem Header="Kostenstellen" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"
-                                          Click="KostenstelleHinzufuegen_Click"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"
-                                          Click="KostenstellenAnzeigen_Click"/>
-                            </MenuItem>
+                            <!-- Kostenstellen (bleibt als modales Popup) -->
+                            <MenuItem Header="Kostenstellen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                      Click="KostenstellenAnzeigen_Click"/>
 
-                            <!-- Lagerorte -->
-                            <MenuItem Header="Lagerorte" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"
-                                          Click="LagerortHinzufuegen_Click"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"
-                                          Click="LagerorteAnzeigen_Click"/>
-                            </MenuItem>
+                            <!-- Lagerorte (bleibt als modales Popup) -->
+                            <MenuItem Header="Lagerorte" Style="{StaticResource DarkSubMenuItemStyle}"
+                                      Click="LagerorteAnzeigen_Click"/>
 
                             <!-- Artikel -->
-                            <MenuItem Header="Artikel" Style="{StaticResource DarkSubMenuItemStyle}">
-                                <MenuItem Header="Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"
-                                          Click="ArtikelHinzufuegen_Click"/>
-                                <MenuItem Header="Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"
-                                          Click="ArtikelAnzeigen_Click"/>
-                            </MenuItem>
+                            <MenuItem Header="Artikel" Style="{StaticResource DarkSubMenuItemStyle}"
+                                      Click="ArtikelAnzeigen_Click"/>
 
                         </MenuItem>
 

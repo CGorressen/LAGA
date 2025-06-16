@@ -75,8 +75,9 @@ namespace LAGA
                 MessageBox.Show("Lieferquelle wurde erfolgreich hinzugefügt.",
                     "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Eingabefelder zurücksetzen für weitere Eingaben
-                ClearAllFields();
+                // Fenster schließen und Erfolg signalisieren
+                this.DialogResult = true;
+                this.Close();
             }
             catch (Exception ex)
             {
@@ -97,6 +98,7 @@ namespace LAGA
         /// </summary>
         private void BtnAbbrechen_Click(object sender, RoutedEventArgs e)
         {
+            this.DialogResult = false;
             this.Close();
         }
 
@@ -138,20 +140,6 @@ namespace LAGA
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Leert alle Eingabefelder nach erfolgreichem Speichern
-        /// </summary>
-        private void ClearAllFields()
-        {
-            txtBezeichnung.Clear();
-            txtWebseite.Clear();
-            txtEmail.Clear();
-            txtTelefon.Clear();
-
-            // Fokus auf das erste Feld setzen
-            txtBezeichnung.Focus();
         }
     }
 }

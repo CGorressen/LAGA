@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LAGA
 {
     /// <summary>
-    /// Modales Fenster zur Anzeige aller Lagerorte mit Löschfunktion
+    /// Modales Fenster zur Anzeige aller Lagerorte mit Lösch- und Hinzufügefunktion
     /// </summary>
     public partial class LagerorteAnzeigen : Window
     {
@@ -138,6 +138,23 @@ namespace LAGA
                             "Datenbankfehler", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Öffnet das Hinzufügen-Fenster für einen neuen Lagerort
+        /// </summary>
+        private void BtnHinzufuegen_Click(object sender, RoutedEventArgs e)
+        {
+            // Lagerort-Hinzufügen-Fenster als modalen Dialog öffnen
+            var hinzufuegenFenster = new LagerortHinzufuegen();
+            hinzufuegenFenster.Owner = this; // Dieses Fenster als Owner setzen
+
+            // Nach dem Schließen des Hinzufügen-Fensters prüfen ob erfolgreich gespeichert
+            if (hinzufuegenFenster.ShowDialog() == true)
+            {
+                // Daten neu laden um neuen Lagerort anzuzeigen
+                LoadLagerorteAsync();
             }
         }
 

@@ -191,6 +191,23 @@ namespace LAGA
         }
 
         /// <summary>
+        /// Öffnet das Hinzufügen-Fenster für eine neue Lieferquelle
+        /// </summary>
+        private void BtnHinzufuegen_Click(object sender, RoutedEventArgs e)
+        {
+            // Lieferquelle-Hinzufügen-Fenster als modalen Dialog öffnen
+            var hinzufuegenFenster = new LieferquelleHinzufuegen();
+            hinzufuegenFenster.Owner = Window.GetWindow(this);
+
+            // Nach dem Schließen des Hinzufügen-Fensters prüfen ob erfolgreich gespeichert
+            if (hinzufuegenFenster.ShowDialog() == true)
+            {
+                // Daten neu laden um neue Lieferquelle anzuzeigen
+                LoadLieferquellenAsync();
+            }
+        }
+
+        /// <summary>
         /// Schließt die Lieferquellen-Ansicht
         /// </summary>
         private void BtnAnsichtSchliessen_Click(object sender, RoutedEventArgs e)

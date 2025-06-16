@@ -383,7 +383,7 @@ namespace LAGA
             [MarshalAs(UnmanagedType.LPWStr)]
             public string pDocName;
             [MarshalAs(UnmanagedType.LPWStr)]
-            public string pOutputFile;
+            public string? pOutputFile;
             [MarshalAs(UnmanagedType.LPWStr)]
             public string pDataType;
         }

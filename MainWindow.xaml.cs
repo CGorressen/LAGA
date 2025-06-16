@@ -14,15 +14,31 @@ namespace LAGA
 
             // Datenbank beim Start initialisieren
             InitializeDatabaseAsync();
+
+            // StartFenster als Standard-Ansicht laden
+            LoadStartFenster();
+        }
+
+        /// <summary>
+        /// Lädt das StartFenster und deaktiviert Event-Handler während Menü-Nutzung
+        /// </summary>
+        private void LoadStartFenster()
+        {
+            var startFenster = new StartFenster();
+            MainContentArea.Content = startFenster;
         }
 
         /// <summary>
         /// Öffentliche Methode zum Leeren des Content-Bereichs
+        /// Lädt automatisch das StartFenster als Standard-Ansicht
         /// </summary>
         public void ClearMainContent()
         {
-            MainContentArea.Content = null;
+            // StartFenster als Standard-Ansicht laden
+            LoadStartFenster();
         }
+
+
 
         /// <summary>
         /// Initialisiert die SQLite-Datenbank asynchron beim Programmstart
@@ -173,12 +189,40 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Zeigt die Lagerbestand-Anzeige im Haupt-Content-Bereich
+        /// Event-Handler für Menü-Item MouseEnter - deaktiviert Scanner-Events
         /// </summary>
+        private void MenuItem_MouseEnter(object sender, RoutedEventArgs e)
+        {
+            if (MainContentArea.Content is StartFenster startFenster)
+            {
+                startFenster.DisableScannerEvents();
+            }
+        }
+
+        /// <summary>
+        /// Event-Handler für Menü-Item MouseLeave - aktiviert Scanner-Events wieder
+        /// </summary>
+        private void MenuItem_MouseLeave(object sender, RoutedEventArgs e)
+        {
+            // Kurze Verzögerung um sicherzustellen, dass Maus wirklich das Menü verlassen hat
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (MainContentArea.Content is StartFenster startFenster)
+                {
+                    startFenster.EnableScannerEvents();
+                }
+            }), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
         private void LagerbestandAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
+                // Scanner-Events wieder aktivieren falls sie deaktiviert waren
+                if (MainContentArea.Content is StartFenster startFenster)
+                {
+                    startFenster.EnableScannerEvents();
+                }
+
                 var lagerbestandAnzeige = new LagerBestandAnzeigen();
                 MainContentArea.Content = lagerbestandAnzeige;
             }

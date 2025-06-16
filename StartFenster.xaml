@@ -1,0 +1,110 @@
+﻿<UserControl x:Class="LAGA.StartFenster"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
+
+    <UserControl.Resources>
+        <!-- Style für Warnmeldungen-Box mit Animation -->
+        <Style x:Key="WarnungsBoxStyle" TargetType="Border">
+            <Setter Property="Background" Value="#FF404040"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="15,10"/>
+            <Setter Property="Margin" Value="20"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <TranslateTransform X="400"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation 
+                                Storyboard.TargetProperty="RenderTransform.X"
+                                From="400" 
+                                To="0" 
+                                Duration="0:0:1.2"
+                                BeginTime="0:0:0.5">
+                                <DoubleAnimation.EasingFunction>
+                                    <BackEase EasingMode="EaseOut" Amplitude="0.3"/>
+                                </DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Style für Warnmeldungen-Text -->
+        <Style x:Key="WarnungsTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Style für Haupt-Text -->
+        <Style x:Key="HauptTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="#FF404040"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="20"/>
+        </Style>
+
+        <!-- Style für Scanner-Bild -->
+        <Style x:Key="ScannerImageStyle" TargetType="Image">
+            <Setter Property="Width" Value="150"/>
+            <Setter Property="Height" Value="190"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="20"/>
+        </Style>
+
+        <!-- Unsichtbares TextBox für Scanner-Eingaben -->
+        <Style x:Key="HiddenScannerInputStyle" TargetType="TextBox">
+            <Setter Property="Width" Value="0"/>
+            <Setter Property="Height" Value="0"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsTabStop" Value="False"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Warnmeldungen-Box oben rechts -->
+        <Border x:Name="borderWarnmeldungen" Style="{StaticResource WarnungsBoxStyle}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <!-- Grüner Punkt -->
+                <Ellipse Width="13" Height="13" Fill="#FF4CAF50" 
+                         VerticalAlignment="Center" Margin="0,1,6,0"/>
+                <!-- Text -->
+                <TextBlock x:Name="txtWarnmeldungen" 
+                           Text="Aktuell sind keine Warnmeldungen vorhanden."
+                           Style="{StaticResource WarnungsTextStyle}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Hauptinhalt mittig zentriiert -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <!-- Scanner-Aufforderung -->
+            <TextBlock Text="Bitte scannen Sie den Barcode, um fortzufahren."
+                       Style="{StaticResource HauptTextStyle}"/>
+
+            <!-- Scanner-Grafik - Direkter Pfad aus Hauptverzeichnis -->
+            <Image x:Name="imgScanner" 
+                   Source="Bilder/scanner.png"
+                   Style="{StaticResource ScannerImageStyle}"/>
+        </StackPanel>
+
+        <!-- Verstecktes TextBox für Scanner-Eingaben -->
+        <TextBox x:Name="txtScannerInput" 
+                 Style="{StaticResource HiddenScannerInputStyle}"
+                 TextChanged="TxtScannerInput_TextChanged"
+                 KeyDown="TxtScannerInput_KeyDown"/>
+    </Grid>
+</UserControl>

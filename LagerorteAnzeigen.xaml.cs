@@ -151,6 +151,7 @@ namespace LAGA
             hinzufuegenFenster.Owner = this; // Dieses Fenster als Owner setzen
 
             // Nach dem Schließen des Hinzufügen-Fensters prüfen ob erfolgreich gespeichert
+            // DialogResult wird automatisch auf true gesetzt wenn erfolgreich gespeichert wurde
             if (hinzufuegenFenster.ShowDialog() == true)
             {
                 // Daten neu laden um neuen Lagerort anzuzeigen

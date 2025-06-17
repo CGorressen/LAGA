@@ -85,8 +85,9 @@ namespace LAGA
                 MessageBox.Show("Kostenstelle wurde erfolgreich hinzugefügt.",
                     "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Eingabefeld zurücksetzen für weitere Eingaben
-                ClearField();
+                // Fenster schließen und Erfolg signalisieren
+                this.DialogResult = true;
+                this.Close();
             }
             catch (Exception ex)
             {
@@ -107,16 +108,8 @@ namespace LAGA
         /// </summary>
         private void BtnAbbrechen_Click(object sender, RoutedEventArgs e)
         {
+            this.DialogResult = false;
             this.Close();
-        }
-
-        /// <summary>
-        /// Leert das Eingabefeld nach erfolgreichem Speichern
-        /// </summary>
-        private void ClearField()
-        {
-            txtBezeichnung.Clear();
-            txtBezeichnung.Focus(); // Fokus zurück auf das Eingabefeld
         }
     }
 }

@@ -93,35 +93,36 @@ namespace LAGA
         {
             try
             {
-                // Artikelbezeichnung kürzen (max. 15 Zeichen für bessere Lesbarkeit)
+                // Artikelbezeichnung kürzen (max. 40 Zeichen für bessere Lesbarkeit)
                 string kurzeBezeichnung = artikel.Bezeichnung.Length > 40
                     ? artikel.Bezeichnung.Substring(0, 15) + "..."
                     : artikel.Bezeichnung;
 
                 var zpl = new StringBuilder();
 
-                // ZPL-Header: Etikett-Start und Konfiguration
-                zpl.AppendLine("^XA");  // Etikett-Start
+                // Etikett-Start
+                zpl.AppendLine("^XA");
 
-                // Etikett-Größe setzen (57mm x 24mm = 456 x 192 Dots bei 203 DPI)
+                // Etikettgröße: 57mm x 24mm → 456 x 192 dots (bei 203 DPI)
                 zpl.AppendLine("^PW456"); // Breite
                 zpl.AppendLine("^LL192"); // Länge
 
-                // Druckgeschwindigkeit und Dunkelheit
-                zpl.AppendLine("^PR4");   // Geschwindigkeit
-                zpl.AppendLine("^MD15");  // Dunkelheit
+                // Druckgeschwindigkeit & Dunkelheit
+                zpl.AppendLine("^PR4");
+                zpl.AppendLine("^MD15");
+
+                // Zeichensatz UTF-8 (optional, für Sonderzeichen)
+                zpl.AppendLine("^CI28");
 
                 // Artikelbezeichnung oben, zentriert
-                zpl.AppendLine($"^FO0,26^FB456,1,0,C^A0N,20,20^FH^FD{kurzeBezeichnung}^FS");
+                zpl.AppendLine("^FO0,35^FB456,1,0,C^A0N,20,20^FH^FD" + kurzeBezeichnung + "^FS");
 
-                // Barcode mit großer Zahl darunter
-                // ^BCN,80,Y,N,N -> Y = Text unter Barcode anzeigen
-                zpl.AppendLine($"^FO10,50^BCN,80,Y,N,N^FD{einheit.Barcode}^FS");
+                // Barcode manuell zentriert: falls der barcode versetzt ist, einfach mal mit dem wert F085 spielen.
+                zpl.AppendLine("^BY2,2,80");
+                zpl.AppendLine("^FO85,60^BCN,80,Y,N,N^FD" + einheit.Barcode + "^FS");
 
-                // KEIN zusätzlicher Text darunter!
-
-                // ZPL-Ende
-                zpl.AppendLine("^XZ");  // Etikett-Ende
+                // Etikett-Ende
+                zpl.AppendLine("^XZ");
 
                 return zpl.ToString();
             }

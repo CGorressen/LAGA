@@ -149,11 +149,7 @@ namespace LAGA
 
                         MessageBox.Show($"Wareneingang erfolgreich abgeschlossen!\n\n" +
                                        $"Artikel: {_artikel.Bezeichnung}\n" +
-                                       $"Eingelagerte Stück: {stueckzahl}\n" +
-                                       $"Barcodes generiert: {neueEinheiten.Count}\n" +
-                                       $"Zebra-Etiketten: ✓ Gedruckt\n\n" +
-                                       $"ZPL-Backup gespeichert in:\n{ZebraEtikettService.GetEtikettenVerzeichnis()}\n\n" +
-                                       $"Überprüfen Sie die Etiketten am Zebra GX420t Drucker.",
+                                       $"Eingelagerte Stück: {stueckzahl}\n",
                                        "Wareneingang abgeschlossen", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     else

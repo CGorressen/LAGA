@@ -171,8 +171,7 @@ namespace LAGA
                         // Lagerbestand neu laden um aktuelle Bestände anzuzeigen
                         RefreshLagerbestand();
 
-                        MessageBox.Show("Lagerbestand wurde aktualisiert.",
-                            "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
+                        
                     }
                 }
                 catch (Exception ex)

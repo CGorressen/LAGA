@@ -6,6 +6,7 @@ namespace LAGA
 {
     /// <summary>
     /// Modales Fenster zum Hinzufügen neuer Lieferquellen
+    /// Nach erfolgreichem Speichern wird der Dialog automatisch geschlossen
     /// </summary>
     public partial class LieferquelleHinzufuegen : Window
     {
@@ -40,6 +41,7 @@ namespace LAGA
 
         /// <summary>
         /// Speichert die neue Lieferquelle asynchron in der Datenbank
+        /// Nach erfolgreichem Speichern wird der Dialog automatisch geschlossen
         /// </summary>
         private async void BtnHinzufuegen_Click(object sender, RoutedEventArgs e)
         {
@@ -75,8 +77,9 @@ namespace LAGA
                 MessageBox.Show("Lieferquelle wurde erfolgreich hinzugefügt.",
                     "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Eingabefelder leeren für weitere Eingaben
-                ClearAllFields();
+                // Dialog schließen und Erfolg signalisieren
+                this.DialogResult = true;
+                this.Close();
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
             {
@@ -178,19 +181,6 @@ namespace LAGA
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Leert alle Eingabefelder nach erfolgreichem Speichern
-        /// </summary>
-        private void ClearAllFields()
-        {
-            txtBezeichnung.Clear();
-            txtWebseite.Clear();
-            txtEmail.Clear();
-            txtTelefon.Clear();
-
-            txtBezeichnung.Focus();
         }
     }
 }

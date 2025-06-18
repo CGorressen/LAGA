@@ -7,6 +7,7 @@ namespace LAGA
 {
     /// <summary>
     /// Modales Fenster zum Hinzufügen neuer Kostenstellen
+    /// Nach erfolgreichem Speichern wird der Dialog automatisch geschlossen
     /// </summary>
     public partial class KostenstelleHinzufuegen : Window
     {
@@ -50,6 +51,7 @@ namespace LAGA
 
         /// <summary>
         /// Speichert die neue Kostenstelle asynchron in der Datenbank
+        /// Nach erfolgreichem Speichern wird der Dialog automatisch geschlossen
         /// </summary>
         private async void BtnHinzufuegen_Click(object sender, RoutedEventArgs e)
         {
@@ -82,8 +84,9 @@ namespace LAGA
                 MessageBox.Show("Kostenstelle wurde erfolgreich hinzugefügt.",
                     "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Eingabefeld leeren für weitere Eingaben
-                ClearField();
+                // Dialog schließen und Erfolg signalisieren
+                this.DialogResult = true;
+                this.Close();
             }
             catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
             {
@@ -161,15 +164,6 @@ namespace LAGA
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Leert das Eingabefeld nach erfolgreichem Speichern
-        /// </summary>
-        private void ClearField()
-        {
-            txtBezeichnung.Clear();
-            txtBezeichnung.Focus();
         }
     }
 }

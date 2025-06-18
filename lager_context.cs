@@ -62,6 +62,9 @@ namespace LAGA
                 entity.Property(l => l.Email).IsRequired().HasMaxLength(200);
                 entity.Property(l => l.Telefon).IsRequired().HasMaxLength(50);
 
+                // Eindeutige Lieferquellen-Bezeichnung (UNIQUE Constraint)
+                entity.HasIndex(l => l.Bezeichnung).IsUnique();
+
                 // Tabellenname in der Datenbank
                 entity.ToTable("Lieferquellen");
             });
@@ -76,6 +79,9 @@ namespace LAGA
                 // Bezeichnung ist erforderlich und hat maximale Länge
                 entity.Property(k => k.Bezeichnung).IsRequired().HasMaxLength(200);
 
+                // Eindeutige Kostenstellen-Bezeichnung (UNIQUE Constraint)
+                entity.HasIndex(k => k.Bezeichnung).IsUnique();
+
                 // Tabellenname in der Datenbank
                 entity.ToTable("Kostenstellen");
             });
@@ -89,6 +95,9 @@ namespace LAGA
 
                 // Bezeichnung ist erforderlich und hat maximale Länge
                 entity.Property(l => l.Bezeichnung).IsRequired().HasMaxLength(200);
+
+                // Eindeutige Lagerort-Bezeichnung (UNIQUE Constraint)
+                entity.HasIndex(l => l.Bezeichnung).IsUnique();
 
                 // Tabellenname in der Datenbank
                 entity.ToTable("Lagerorte");

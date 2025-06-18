@@ -43,8 +43,8 @@ namespace LAGA
         /// </summary>
         private async void BtnHinzufuegen_Click(object sender, RoutedEventArgs e)
         {
-            // Validierung vor dem Speichern
-            if (!ValidateAllFields())
+            // Validierung vor dem Speichern (inklusive Duplikatsprüfung)
+            if (!ValidateAllFields() || !await ValidateBeforeSaveAsync())
             {
                 return;
             }
@@ -75,9 +75,14 @@ namespace LAGA
                 MessageBox.Show("Lieferquelle wurde erfolgreich hinzugefügt.",
                     "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Fenster schließen und Erfolg signalisieren
-                this.DialogResult = true;
-                this.Close();
+                // Eingabefelder leeren für weitere Eingaben
+                ClearAllFields();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
+            {
+                MessageBox.Show("Eine Lieferquelle mit dieser Bezeichnung existiert bereits. Bitte wählen Sie eine andere Bezeichnung.",
+                    "Validierungsfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+                txtBezeichnung.Focus();
             }
             catch (Exception ex)
             {
@@ -91,6 +96,39 @@ namespace LAGA
                 btnHinzufuegen.Content = "Hinzufügen";
                 ValidateInput(); // Prüft erneut ob Button aktiviert werden soll
             }
+        }
+
+        /// <summary>
+        /// Umfassende Validierung vor dem Speichern
+        /// Prüft ob bereits eine Lieferquelle mit derselben Bezeichnung existiert
+        /// </summary>
+        private async Task<bool> ValidateBeforeSaveAsync()
+        {
+            // Bezeichnung bereits vorhanden?
+            try
+            {
+                using (var context = new LagerContext())
+                {
+                    var exists = await context.Lieferquellen
+                        .AnyAsync(l => l.Bezeichnung == txtBezeichnung.Text.Trim());
+
+                    if (exists)
+                    {
+                        MessageBox.Show("Eine Lieferquelle mit dieser Bezeichnung existiert bereits.",
+                            "Validierungsfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        txtBezeichnung.Focus();
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler bei der Validierung: {ex.Message}",
+                    "Datenbankfehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -140,6 +178,19 @@ namespace LAGA
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Leert alle Eingabefelder nach erfolgreichem Speichern
+        /// </summary>
+        private void ClearAllFields()
+        {
+            txtBezeichnung.Clear();
+            txtWebseite.Clear();
+            txtEmail.Clear();
+            txtTelefon.Clear();
+
+            txtBezeichnung.Focus();
         }
     }
 }

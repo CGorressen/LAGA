@@ -53,12 +53,9 @@ namespace LAGA
         /// </summary>
         private async void BtnLagerortHinzufuegen_Click(object sender, RoutedEventArgs e)
         {
-            // Validierung vor dem Speichern
-            if (string.IsNullOrWhiteSpace(txtBezeichnung.Text))
+            // Validierung vor dem Speichern (inklusive Duplikatsprüfung)
+            if (!ValidateField() || !await ValidateBeforeSaveAsync())
             {
-                MessageBox.Show("Bitte geben Sie eine Bezeichnung ein.",
-                    "Validierungsfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
-                txtBezeichnung.Focus();
                 return;
             }
 
@@ -85,9 +82,14 @@ namespace LAGA
                 MessageBox.Show("Lagerort wurde erfolgreich hinzugefügt.",
                     "Erfolg", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Fenster schließen und Erfolg signalisieren
-                this.DialogResult = true;
-                this.Close();
+                // Eingabefeld leeren für weitere Eingaben
+                ClearField();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("UNIQUE constraint failed") == true)
+            {
+                MessageBox.Show("Ein Lagerort mit dieser Bezeichnung existiert bereits. Bitte wählen Sie eine andere Bezeichnung.",
+                    "Validierungsfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+                txtBezeichnung.Focus();
             }
             catch (Exception ex)
             {
@@ -104,12 +106,70 @@ namespace LAGA
         }
 
         /// <summary>
+        /// Umfassende Validierung vor dem Speichern
+        /// Prüft ob bereits ein Lagerort mit derselben Bezeichnung existiert
+        /// </summary>
+        private async Task<bool> ValidateBeforeSaveAsync()
+        {
+            // Bezeichnung bereits vorhanden?
+            try
+            {
+                using (var context = new LagerContext())
+                {
+                    var exists = await context.Lagerorte
+                        .AnyAsync(l => l.Bezeichnung == txtBezeichnung.Text.Trim());
+
+                    if (exists)
+                    {
+                        MessageBox.Show("Ein Lagerort mit dieser Bezeichnung existiert bereits.",
+                            "Validierungsfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        txtBezeichnung.Focus();
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler bei der Validierung: {ex.Message}",
+                    "Datenbankfehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Schließt das Fenster ohne zu speichern
         /// </summary>
         private void BtnAbbrechen_Click(object sender, RoutedEventArgs e)
         {
             this.DialogResult = false;
             this.Close();
+        }
+
+        /// <summary>
+        /// Validiert das Eingabefeld und zeigt Fehlermeldung an
+        /// </summary>
+        private bool ValidateField()
+        {
+            if (string.IsNullOrWhiteSpace(txtBezeichnung.Text))
+            {
+                MessageBox.Show("Bitte geben Sie eine Bezeichnung ein.",
+                    "Validierungsfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+                txtBezeichnung.Focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Leert das Eingabefeld nach erfolgreichem Speichern
+        /// </summary>
+        private void ClearField()
+        {
+            txtBezeichnung.Clear();
+            txtBezeichnung.Focus();
         }
     }
 }

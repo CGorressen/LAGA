@@ -29,6 +29,13 @@ namespace LAGA
         public string Barcode { get; set; } = string.Empty;
 
         /// <summary>
+        /// Datum und Uhrzeit der Erstellung dieser ArtikelEinheit
+        /// Wird beim Wareneingang automatisch gesetzt und für Barcode-Neudruck verwendet
+        /// </summary>
+        [Required]
+        public DateTime ErstellungsDatum { get; set; }
+
+        /// <summary>
         /// Navigation Property zum verknüpften Artikel
         /// Ermöglicht den Zugriff auf Artikel-Informationen über Entity Framework
         /// </summary>

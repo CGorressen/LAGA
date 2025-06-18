@@ -185,6 +185,7 @@
             <DataGrid.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Neuer Wareneingang" Click="MenuItemNeuerWareneingang_Click"/>
+                    <MenuItem Header="Barcodes" Click="MenuItemBarcodes_Click"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>
 

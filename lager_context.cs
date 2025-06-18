@@ -154,6 +154,9 @@ namespace LAGA
                 entity.Property(ae => ae.Barcode).IsRequired().HasMaxLength(10);
                 entity.HasIndex(ae => ae.Barcode).IsUnique();
 
+                // ErstellungsDatum ist erforderlich
+                entity.Property(ae => ae.ErstellungsDatum).IsRequired();
+
                 // Fremdschlüssel-Beziehung zu Artikel mit ON DELETE RESTRICT
                 // Verhindert das Löschen von Artikeln, solange noch Einheiten im Lager sind
                 entity.HasOne(ae => ae.Artikel)

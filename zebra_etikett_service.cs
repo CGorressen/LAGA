@@ -45,7 +45,7 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Erstellt und druckt ZPL-Etiketten für eine Liste von ArtikelEinheiten
+        /// Erstellt und druckt ZPL-Etiketten für eine Liste von ArtikelEinheiten (Wareneingang)
         /// </summary>
         /// <param name="artikelEinheiten">Liste der ArtikelEinheiten für die Etiketten erstellt werden sollen</param>
         /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
@@ -82,6 +82,47 @@ namespace LAGA
             catch (Exception ex)
             {
                 throw new Exception($"Fehler beim Erstellen der ZPL-Etiketten: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Druckt bestehende Barcodes erneut (für Neudruck-Funktionalität)
+        /// </summary>
+        /// <param name="ausgewaehlteEinheiten">Liste der ArtikelEinheiten die neu gedruckt werden sollen</param>
+        /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
+        public static async Task<bool> DruckeBestehendeBarcodes(
+            List<ArtikelEinheit> ausgewaehlteEinheiten, Artikel artikel)
+        {
+            try
+            {
+                var erfolgreicheEtiketten = new List<string>();
+
+                foreach (var einheit in ausgewaehlteEinheiten)
+                {
+                    // ZPL-Etikett für jede ausgewählte Einheit erstellen
+                    string zplCode = ErstelleZPLEtikett(einheit, artikel);
+
+                    if (!string.IsNullOrEmpty(zplCode))
+                    {
+                        // ZPL-Code als Datei speichern (Backup für Neudruck)
+                        await SpeichereZPLDateiAsync(einheit, zplCode, "Neudruck");
+
+                        erfolgreicheEtiketten.Add(zplCode);
+                    }
+                }
+
+                // Alle erstellten Etiketten drucken
+                if (erfolgreicheEtiketten.Count > 0)
+                {
+                    await DruckeZPLEtikettenAsync(erfolgreicheEtiketten);
+                    return true;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Fehler beim Neudruck der Barcodes: {ex.Message}", ex);
             }
         }
 
@@ -132,15 +173,17 @@ namespace LAGA
             }
         }
 
-
         /// <summary>
         /// Speichert den ZPL-Code als Datei (für Debug/Backup)
         /// </summary>
-        private static async Task SpeichereZPLDateiAsync(ArtikelEinheit einheit, string zplCode)
+        private static async Task SpeichereZPLDateiAsync(ArtikelEinheit einheit, string zplCode, string prefix = "")
         {
             try
             {
-                string dateiname = $"{einheit.ArtikelId}_{einheit.Barcode}.zpl";
+                string dateiname = string.IsNullOrEmpty(prefix)
+                    ? $"{einheit.ArtikelId}_{einheit.Barcode}.zpl"
+                    : $"{prefix}_{einheit.ArtikelId}_{einheit.Barcode}_{DateTime.Now:yyyyMMdd_HHmmss}.zpl";
+
                 string vollstaendigerPfad = Path.Combine(EtikettenVerzeichnis, dateiname);
 
                 await File.WriteAllTextAsync(vollstaendigerPfad, zplCode, Encoding.UTF8);
@@ -356,7 +399,8 @@ namespace LAGA
                 var testEinheit = new ArtikelEinheit
                 {
                     ArtikelId = 999,
-                    Barcode = "1234567890"
+                    Barcode = "1234567890",
+                    ErstellungsDatum = DateTime.Now
                 };
 
                 var testArtikel = new Artikel

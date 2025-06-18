@@ -109,6 +109,9 @@ namespace LAGA
                 btnEinlagern.Content = "Lagert ein...";
                 ShowStatus($"Lagere {stueckzahl} Einheiten ein...", Brushes.Blue);
 
+                // Aktuelles Datum und Uhrzeit für alle Einheiten dieses Wareneingangs
+                DateTime erstellungsDatum = DateTime.Now;
+
                 // Liste für die neuen ArtikelEinheiten
                 var neueEinheiten = new List<ArtikelEinheit>();
 
@@ -120,7 +123,8 @@ namespace LAGA
                     var einheit = new ArtikelEinheit
                     {
                         ArtikelId = _artikel.Id,
-                        Barcode = barcode
+                        Barcode = barcode,
+                        ErstellungsDatum = erstellungsDatum // Alle Einheiten dieses Batches haben dasselbe ErstellungsDatum
                     };
 
                     neueEinheiten.Add(einheit);
@@ -185,7 +189,7 @@ namespace LAGA
                                        $"• Zebra GX420t USB-Verbindung prüfen\n" +
                                        $"• Zebra-Treiber neu installieren\n" +
                                        $"• ZPL-Dateien manuell drucken über Zebra Setup Utilities\n\n" +
-                                       $"ZPL-Verzeichnis: {zplVerzeichnis}\n\n" +
+                                       $"ZPL-Verzeichnis:\n{zplVerzeichnis}\n\n" +
                                        $"Soll das ZPL-Verzeichnis jetzt geöffnet werden?",
                                        "Manueller Zebra-Druck erforderlich",
                                        MessageBoxButton.YesNo, MessageBoxImage.Question);

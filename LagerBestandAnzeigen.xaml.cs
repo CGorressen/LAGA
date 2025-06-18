@@ -170,13 +170,35 @@ namespace LAGA
                     {
                         // Lagerbestand neu laden um aktuelle Bestände anzuzeigen
                         RefreshLagerbestand();
-
-                        
                     }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Fehler beim Öffnen des Wareneingang-Fensters: {ex.Message}",
+                        "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Öffnet das Barcode-Anzeige-Fenster für den ausgewählten Artikel
+        /// </summary>
+        private void MenuItemBarcodes_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgLagerbestand.SelectedItem is LagerbestandAnzeigeDto selectedBestand)
+            {
+                try
+                {
+                    // Barcode-Anzeige-Fenster als modalen Dialog öffnen
+                    var barcodeAnzeigeFenster = new BarcodeAnzeigen(selectedBestand.OriginalArtikel);
+                    barcodeAnzeigeFenster.Owner = Window.GetWindow(this);
+
+                    // Dialog anzeigen
+                    barcodeAnzeigeFenster.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Fehler beim Öffnen des Barcode-Fensters: {ex.Message}",
                         "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }

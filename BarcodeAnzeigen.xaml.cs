@@ -181,11 +181,11 @@ namespace LAGA
             // Button-Text anpassen
             if (ausgewaehlteAnzahl > 0)
             {
-                btnAusgewaehlteDrucken.Content = $"Ausgewählte drucken ({ausgewaehlteAnzahl})";
+                btnAusgewaehlteDrucken.Content = $"Drucken ({ausgewaehlteAnzahl})";
             }
             else
             {
-                btnAusgewaehlteDrucken.Content = "Ausgewählte drucken";
+                btnAusgewaehlteDrucken.Content = "Drucken";
             }
         }
 

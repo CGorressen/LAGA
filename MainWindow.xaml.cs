@@ -1,10 +1,12 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Controls;
 
 namespace LAGA
 {
     /// <summary>
     /// Hauptfenster der LAGA-Anwendung mit dynamisch austauschbarem Content-Bereich
+    /// Jetzt mit portabler Ordnerstruktur und automatischer Initialisierung
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -12,11 +14,44 @@ namespace LAGA
         {
             InitializeComponent();
 
+            // Portable Ordnerstruktur beim Start initialisieren
+            InitializeApplicationDirectories();
+
             // Datenbank beim Start initialisieren
             InitializeDatabaseAsync();
 
             // StartFenster als Standard-Ansicht laden
             LoadStartFenster();
+        }
+
+        /// <summary>
+        /// Initialisiert die portable Ordnerstruktur der Anwendung
+        /// Erstellt alle benötigten Unterordner falls sie nicht existieren
+        /// </summary>
+        private void InitializeApplicationDirectories()
+        {
+            try
+            {
+                // Erstelle alle benötigten Anwendungsordner
+                PathHelper.EnsureDirectoriesExist();
+
+                // Optional: Debug-Information über die Pfade (kann später entfernt werden)
+                System.Diagnostics.Debug.WriteLine("Anwendungsordner erfolgreich initialisiert:");
+                System.Diagnostics.Debug.WriteLine(PathHelper.GetPathInformation());
+            }
+            catch (Exception ex)
+            {
+                // Kritischer Fehler beim Erstellen der Ordnerstruktur
+                MessageBox.Show(
+                    $"Fehler beim Initialisieren der Anwendungsordner:\n\n{ex.Message}\n\n" +
+                    $"Die Anwendung kann nicht gestartet werden.",
+                    "Kritischer Fehler",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+
+                // Anwendung beenden, da die Ordnerstruktur nicht erstellt werden konnte
+                Application.Current.Shutdown();
+            }
         }
 
         /// <summary>
@@ -40,6 +75,7 @@ namespace LAGA
 
         /// <summary>
         /// Initialisiert die SQLite-Datenbank asynchron beim Programmstart
+        /// Verwendet jetzt den portablen Datenbankpfad
         /// </summary>
         private async void InitializeDatabaseAsync()
         {
@@ -48,13 +84,22 @@ namespace LAGA
                 using (var context = new LagerContext())
                 {
                     // Erstellt die Datenbank und alle Tabellen falls sie nicht existieren
+                    // Die Datenbank wird jetzt im Datenbank-Unterordner erstellt
                     await context.Database.EnsureCreatedAsync();
                 }
+
+                // Optional: Debug-Information über den Datenbankpfad
+                System.Diagnostics.Debug.WriteLine($"Datenbank erfolgreich initialisiert: {PathHelper.DatabaseFilePath}");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Initialisieren der Datenbank: {ex.Message}",
-                    "Datenbankfehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Fehler bei der Datenbankinitialisierung
+                MessageBox.Show(
+                    $"Fehler beim Initialisieren der Datenbank:\n\n{ex.Message}\n\n" +
+                    $"Datenbankpfad: {PathHelper.DatabaseFilePath}",
+                    "Datenbankfehler",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
         }
 
@@ -63,11 +108,19 @@ namespace LAGA
         /// </summary>
         private void LieferquellenAnzeigen_Click(object sender, RoutedEventArgs e)
         {
-            // Erstellt eine neue Instanz der Lieferquellen-Anzeige
-            var lieferquellenAnzeige = new LieferquellenAnzeigen();
+            try
+            {
+                // Erstellt eine neue Instanz der Lieferquellen-Anzeige
+                var lieferquellenAnzeige = new LieferquellenAnzeigen();
 
-            // Lädt den UserControl in den Haupt-Content-Bereich
-            MainContentArea.Content = lieferquellenAnzeige;
+                // Lädt den UserControl in den Haupt-Content-Bereich
+                MainContentArea.Content = lieferquellenAnzeige;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen der Lieferquellen-Anzeige: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         /// <summary>

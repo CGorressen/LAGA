@@ -4,6 +4,7 @@ namespace LAGA
 {
     /// <summary>
     /// Entity Framework Datenbank-Context für die LAGA SQLite-Datenbank
+    /// Verwendet jetzt portable Pfade für die Datenbankdatei
     /// </summary>
     public class LagerContext : DbContext
     {
@@ -34,12 +35,14 @@ namespace LAGA
         public DbSet<ArtikelEinheit> ArtikelEinheiten { get; set; }
 
         /// <summary>
-        /// Konfiguriert die Datenbankverbindung zur SQLite-Datei "Lager.db"
+        /// Konfiguriert die Datenbankverbindung zur SQLite-Datei im Datenbank-Ordner
+        /// Verwendet jetzt PathHelper für portable Pfade
         /// </summary>
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // SQLite-Datenbankdatei wird im Anwendungsverzeichnis erstellt
-            optionsBuilder.UseSqlite("Data Source=Lager.db");
+            // SQLite-Datenbankdatei wird im Datenbank-Unterordner der Anwendung erstellt
+            // Verwendet PathHelper.DatabaseFilePath für den vollständigen, portablen Pfad
+            optionsBuilder.UseSqlite($"Data Source={PathHelper.DatabaseFilePath}");
         }
 
         /// <summary>
@@ -110,34 +113,46 @@ namespace LAGA
                 entity.HasKey(a => a.Id);
                 entity.Property(a => a.Id).ValueGeneratedOnAdd();
 
-                // Textfelder mit Längen-Begrenzungen
+                // Alle Textfelder sind erforderlich und haben maximale Längen
                 entity.Property(a => a.Bezeichnung).IsRequired().HasMaxLength(200);
                 entity.Property(a => a.ExterneArtikelIdLieferant).IsRequired().HasMaxLength(100);
                 entity.Property(a => a.ExterneArtikelIdHersteller).IsRequired().HasMaxLength(100);
 
-                // Eindeutige Artikelbezeichnung (UNIQUE Constraint)
-                entity.HasIndex(a => a.Bezeichnung).IsUnique();
+                // Numerische Felder mit Validierung
+                entity.Property(a => a.Lieferzeit).IsRequired();
+                entity.Property(a => a.Mindestbestand).IsRequired();
+                entity.Property(a => a.Maximalbestand).IsRequired();
+                entity.Property(a => a.IstEinzelteil).IsRequired();
 
-                // Fremdschlüssel-Beziehungen mit ON DELETE RESTRICT
+                // Fremdschlüssel-Beziehungen
+                entity.Property(a => a.LieferantId).IsRequired();
+                entity.Property(a => a.HerstellerId).IsRequired();
+                entity.Property(a => a.KostenstelleId).IsRequired();
+                entity.Property(a => a.LagerortId).IsRequired();
+
+                // Navigation Properties konfigurieren
                 entity.HasOne(a => a.Lieferant)
-                    .WithMany()
-                    .HasForeignKey(a => a.LieferantId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(a => a.LieferantId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(a => a.Hersteller)
-                    .WithMany()
-                    .HasForeignKey(a => a.HerstellerId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(a => a.HerstellerId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(a => a.Kostenstelle)
-                    .WithMany()
-                    .HasForeignKey(a => a.KostenstelleId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(a => a.KostenstelleId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(a => a.Lagerort)
-                    .WithMany()
-                    .HasForeignKey(a => a.LagerortId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(a => a.LagerortId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Eindeutige Artikel-Bezeichnung (UNIQUE Constraint)
+                entity.HasIndex(a => a.Bezeichnung).IsUnique();
 
                 // Tabellenname in der Datenbank
                 entity.ToTable("Artikel");
@@ -150,19 +165,23 @@ namespace LAGA
                 entity.HasKey(ae => ae.Id);
                 entity.Property(ae => ae.Id).ValueGeneratedOnAdd();
 
-                // Barcode ist erforderlich, hat maximale Länge und muss eindeutig sein
-                entity.Property(ae => ae.Barcode).IsRequired().HasMaxLength(10);
-                entity.HasIndex(ae => ae.Barcode).IsUnique();
+                // Barcode ist erforderlich und hat maximale Länge
+                entity.Property(ae => ae.Barcode).IsRequired().HasMaxLength(50);
 
                 // ErstellungsDatum ist erforderlich
                 entity.Property(ae => ae.ErstellungsDatum).IsRequired();
 
-                // Fremdschlüssel-Beziehung zu Artikel mit ON DELETE RESTRICT
-                // Verhindert das Löschen von Artikeln, solange noch Einheiten im Lager sind
+                // Fremdschlüssel zur Artikel-Tabelle
+                entity.Property(ae => ae.ArtikelId).IsRequired();
+
+                // Navigation Property konfigurieren mit ON DELETE RESTRICT
                 entity.HasOne(ae => ae.Artikel)
-                    .WithMany()
-                    .HasForeignKey(ae => ae.ArtikelId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                      .WithMany()
+                      .HasForeignKey(ae => ae.ArtikelId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Eindeutiger Barcode (UNIQUE Constraint)
+                entity.HasIndex(ae => ae.Barcode).IsUnique();
 
                 // Tabellenname in der Datenbank
                 entity.ToTable("ArtikelEinheiten");

@@ -52,7 +52,7 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
 
             <!-- Lagerort Hinzufügen Button (dunkelgrau) -->
-            <Button x:Name="btnLagerortHinzufuegen" Content="Lagerort Hinzufügen" 
+            <Button x:Name="btnLagerortHinzufuegen" Content="Hinzufügen" 
                     Style="{StaticResource ActionButtonStyle}"
                     Background="#FF404040" Foreground="White"
                     IsEnabled="False"

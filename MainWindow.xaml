@@ -160,8 +160,8 @@
 
                         <!-- Warnsystem -->
                         <MenuItem Header="Warnsystem" Style="{StaticResource DarkSubMenuItemStyle}">
-                            <MenuItem Header="Empfänger Hinzufügen" Style="{StaticResource DarkSubMenuItemStyle}"/>
-                            <MenuItem Header="Empfänger Anzeigen" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                            <MenuItem Header="Empfänger" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                            
                         </MenuItem>
 
                         <!-- Datenbanksicherung -->

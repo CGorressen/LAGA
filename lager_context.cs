@@ -35,6 +35,12 @@ namespace LAGA
         public DbSet<ArtikelEinheit> ArtikelEinheiten { get; set; }
 
         /// <summary>
+        /// Tabelle für E-Mail-Empfänger des Warnsystems
+        /// Speichert die E-Mail-Adressen für Test-E-Mails und Warn-E-Mails
+        /// </summary>
+        public DbSet<Empfaenger> Empfaenger { get; set; }
+
+        /// <summary>
         /// Konfiguriert die Datenbankverbindung zur SQLite-Datei im Datenbank-Ordner
         /// Verwendet jetzt PathHelper für portable Pfade
         /// </summary>
@@ -185,6 +191,23 @@ namespace LAGA
 
                 // Tabellenname in der Datenbank
                 entity.ToTable("ArtikelEinheiten");
+            });
+
+            // Konfiguration für Empfaenger-Tabelle
+            modelBuilder.Entity<Empfaenger>(entity =>
+            {
+                // Primärschlüssel mit Auto-Inkrement
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                // E-Mail ist erforderlich und hat maximale Länge
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
+
+                // Eindeutige E-Mail-Adresse (UNIQUE Constraint)
+                entity.HasIndex(e => e.Email).IsUnique();
+
+                // Tabellenname in der Datenbank
+                entity.ToTable("Empfaenger");
             });
         }
     }

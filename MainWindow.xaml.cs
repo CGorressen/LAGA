@@ -198,5 +198,20 @@ namespace LAGA
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private void EmpfaengerAnzeigen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var empfaengerAnzeige = new EmpfängerAnzeigen();
+                empfaengerAnzeige.Owner = this;
+                empfaengerAnzeige.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen des Empfänger-Anzeige-Fensters: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 }

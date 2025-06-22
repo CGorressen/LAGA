@@ -18,6 +18,7 @@ namespace LAGA
 
     /// <summary>
     /// Modales Fenster für das Auslagern von Artikeln mittels Barcode-Scanner
+    /// Erweitert um automatische Bestandsüberwachung nach Auslagerung
     /// </summary>
     public partial class ArtikelAuslagern : Window
     {
@@ -35,6 +36,12 @@ namespace LAGA
         /// Flag um zu verhindern, dass während einer Verarbeitung weitere Scans verarbeitet werden
         /// </summary>
         private bool _isProcessing = false;
+
+        /// <summary>
+        /// Liste der ArtikelIds, die von der Auslagerung betroffen waren (für Bestandsmonitor)
+        /// Wird an das aufrufende Fenster zurückgegeben
+        /// </summary>
+        public List<int> BetroffeneArtikelIds { get; private set; } = new List<int>();
 
         public ArtikelAuslagern(string initialBarcode, ArtikelEinheit initialEinheit)
         {
@@ -193,6 +200,7 @@ namespace LAGA
 
         /// <summary>
         /// Führt das Auslagern aller gescannten Artikel durch
+        /// Erweitert um automatische Bestandsüberwachung nach Auslagerung
         /// </summary>
         private async void BtnAuslagern_Click(object sender, RoutedEventArgs e)
         {
@@ -212,6 +220,15 @@ namespace LAGA
                     btnAuslagern.IsEnabled = false;
                     btnAuslagern.Content = "Lagert aus...";
 
+                    // Betroffene ArtikelIds für Bestandsmonitor sammeln und speichern
+                    var betroffeneArtikelIds = _gescannteArtikel
+                        .Select(a => a.OriginalEinheit.ArtikelId)
+                        .Distinct()
+                        .ToList();
+
+                    // ArtikelIds für späteren Zugriff speichern
+                    BetroffeneArtikelIds = betroffeneArtikelIds;
+
                     // Alle ArtikelEinheiten aus der Datenbank löschen
                     using (var context = new LagerContext())
                     {
@@ -227,6 +244,12 @@ namespace LAGA
 
                     MessageBox.Show($"Erfolgreich {_gescannteArtikel.Count} Artikel ausgelagert!",
                         "Auslagern abgeschlossen", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    // WICHTIG: Bestandsmonitor für alle betroffenen Artikel ausführen
+                    foreach (int artikelId in betroffeneArtikelIds)
+                    {
+                        await BestandsMonitor.PruefeBestandNachAenderungAsync(artikelId);
+                    }
 
                     // Dialog schließen
                     this.DialogResult = true;

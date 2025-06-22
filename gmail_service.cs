@@ -17,7 +17,7 @@ namespace LAGA
 {
     /// <summary>
     /// Service für die Kommunikation mit der Gmail API
-    /// Erweiterbare Struktur für Test-E-Mails und später Warn-E-Mails
+    /// Erweiterbare Struktur für Test-E-Mails und Warn-E-Mails
     /// </summary>
     public static class GmailEmailService
     {
@@ -260,6 +260,154 @@ namespace LAGA
         }
 
         /// <summary>
+        /// Sendet eine Warn-E-Mail für einen Artikel mit niedrigem Bestand an alle registrierten Empfänger
+        /// E-Mail wird im Plain Text Format erstellt entsprechend der Dokumentation
+        /// </summary>
+        /// <param name="artikel">Artikel mit niedrigem Bestand</param>
+        /// <param name="aktuellerBestand">Aktueller Bestand des Artikels</param>
+        /// <returns>True wenn alle E-Mails erfolgreich gesendet wurden</returns>
+        public static async Task<bool> SendeWarnEmailAsync(Artikel artikel, int aktuellerBestand)
+        {
+            try
+            {
+                // Gmail Service erstellen
+                var service = await CreateGmailServiceAsync();
+                if (service == null)
+                {
+                    throw new InvalidOperationException("Gmail Service konnte nicht erstellt werden.");
+                }
+
+                try
+                {
+                    // Alle Empfänger aus der Datenbank laden
+                    List<string> empfaengerEmails;
+                    using (var context = new LagerContext())
+                    {
+                        empfaengerEmails = await context.Empfaenger
+                            .Select(e => e.Email)
+                            .ToListAsync();
+                    }
+
+                    if (!empfaengerEmails.Any())
+                    {
+                        System.Diagnostics.Debug.WriteLine("Keine Empfänger für Warn-E-Mails registriert");
+                        return false;
+                    }
+
+                    // Warn-E-Mail-Inhalt erstellen
+                    string betreff = $"LAGA Warnung: {artikel.Bezeichnung} - Mindestbestand erreicht";
+                    string nachricht = ErstelleWarnEmailInhalt(artikel, aktuellerBestand);
+
+                    // E-Mail an alle Empfänger senden
+                    int erfolgreicheEmails = 0;
+                    var fehlerListe = new List<string>();
+
+                    foreach (string empfaengerEmail in empfaengerEmails)
+                    {
+                        try
+                        {
+                            bool erfolg = await SendeEmailAsync(service, empfaengerEmail, betreff, nachricht);
+                            if (erfolg)
+                            {
+                                erfolgreicheEmails++;
+                            }
+                            else
+                            {
+                                fehlerListe.Add(empfaengerEmail);
+                            }
+
+                            // Kurze Pause zwischen E-Mails um API-Limits zu vermeiden
+                            await Task.Delay(200);
+                        }
+                        catch (Exception ex)
+                        {
+                            fehlerListe.Add($"{empfaengerEmail} ({ex.Message})");
+                            System.Diagnostics.Debug.WriteLine($"Fehler beim Senden der Warn-E-Mail an {empfaengerEmail}: {ex.Message}");
+                        }
+                    }
+
+                    // Ergebnis bewerten
+                    bool alleSentSuccessfully = erfolgreicheEmails == empfaengerEmails.Count;
+
+                    System.Diagnostics.Debug.WriteLine($"Warn-E-Mail für '{artikel.Bezeichnung}': {erfolgreicheEmails}/{empfaengerEmails.Count} erfolgreich");
+
+                    return alleSentSuccessfully;
+                }
+                finally
+                {
+                    // Gmail Service ordnungsgemäß freigeben
+                    service?.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fehler beim Senden der Warn-E-Mail: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Erstellt den Inhalt der Warn-E-Mail entsprechend der Dokumentation
+        /// Plain Text Format für bessere Spam-Vermeidung
+        /// </summary>
+        /// <param name="artikel">Der betroffene Artikel</param>
+        /// <param name="aktuellerBestand">Der aktuelle Bestand</param>
+        /// <returns>Formatierter E-Mail-Text</returns>
+        private static string ErstelleWarnEmailInhalt(Artikel artikel, int aktuellerBestand)
+        {
+            var sb = new StringBuilder();
+
+            // Header
+            sb.AppendLine("Dies ist eine automatisch generierte Nachricht des Lagerverwaltungssystems LAGA.");
+            sb.AppendLine();
+            sb.AppendLine("Folgender Artikel hat den Mindestbestand erreicht und muss nachbestellt werden:");
+            sb.AppendLine();
+            sb.AppendLine("--------------------------------------------------");
+
+            // Artikel-Informationen
+            sb.AppendLine(artikel.Bezeichnung);
+            sb.AppendLine($"Aktueller Bestand: {aktuellerBestand}");
+            sb.AppendLine($"Mindestbestand: {artikel.Mindestbestand}");
+            sb.AppendLine($"Maximalbestand: {artikel.Maximalbestand}");
+
+            // Benötigte Einheiten berechnen (Maximalbestand - aktueller Bestand)
+            int benoetigteEinheiten = Math.Abs(artikel.Maximalbestand - aktuellerBestand);
+            sb.AppendLine($"Benötigte Einheiten: {benoetigteEinheiten}");
+            sb.AppendLine("--------------------------------------------------");
+
+            // Kostenstelle
+            sb.AppendLine($"Kostenstelle: {artikel.Kostenstelle?.Bezeichnung ?? "Unbekannt"}");
+            sb.AppendLine();
+
+            // Lieferanten-Informationen
+            if (artikel.Lieferant != null)
+            {
+                sb.AppendLine($"Lieferant: {artikel.Lieferant.Bezeichnung}");
+                sb.AppendLine($"Webseite: {artikel.Lieferant.Webseite}");
+                sb.AppendLine($"E-Mail: {artikel.Lieferant.Email}");
+                sb.AppendLine($"Telefon: {artikel.Lieferant.Telefon}");
+                sb.AppendLine($"Artikelnummer: {artikel.ExterneArtikelIdLieferant}");
+                sb.AppendLine();
+            }
+
+            // Hersteller-Informationen
+            if (artikel.Hersteller != null)
+            {
+                sb.AppendLine($"Hersteller: {artikel.Hersteller.Bezeichnung}");
+                sb.AppendLine($"Webseite: {artikel.Hersteller.Webseite}");
+                sb.AppendLine($"E-Mail: {artikel.Hersteller.Email}");
+                sb.AppendLine($"Telefon: {artikel.Hersteller.Telefon}");
+                sb.AppendLine($"Artikelnummer: {artikel.ExterneArtikelIdHersteller}");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Mit freundlichen Grüßen");
+            sb.AppendLine("Ihr LAGA-System");
+
+            return sb.ToString();
+        }
+
+        /// <summary>
         /// Sendet eine einzelne E-Mail über Gmail API
         /// Erweiterbare Methode für verschiedene E-Mail-Typen
         /// </summary>
@@ -344,19 +492,6 @@ namespace LAGA
             sb.AppendLine($"Erforderliche Bereiche: {string.Join(", ", Scopes)}");
 
             return sb.ToString();
-        }
-
-        /// <summary>
-        /// Placeholder für zukünftige Warn-E-Mail Funktionalität
-        /// Wird in späteren Kapiteln implementiert
-        /// </summary>
-        /// <param name="artikel">Artikel mit niedrigem Bestand</param>
-        /// <returns>True wenn Warn-E-Mail erfolgreich gesendet wurde</returns>
-        public static async Task<bool> SendeWarnEmailAsync(Artikel artikel)
-        {
-            // TODO: Implementierung in späteren Kapiteln
-            await Task.CompletedTask;
-            throw new NotImplementedException("Warn-E-Mail Funktionalität wird in späteren Kapiteln implementiert.");
         }
     }
 }

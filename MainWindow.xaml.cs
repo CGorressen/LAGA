@@ -7,6 +7,7 @@ namespace LAGA
     /// <summary>
     /// Hauptfenster der LAGA-Anwendung mit dynamisch austauschbarem Content-Bereich
     /// Jetzt mit portabler Ordnerstruktur und automatischer Initialisierung
+    /// Erweitert um Warnungen-Menü für das Warnsystem
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -199,6 +200,26 @@ namespace LAGA
             }
         }
 
+        /// <summary>
+        /// Zeigt die WarnArtikel-Anzeige im Haupt-Content-Bereich (NEU)
+        /// </summary>
+        private void WarnungenAnzeigen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var warnArtikelAnzeige = new WarnArtikelAnzeigen();
+                MainContentArea.Content = warnArtikelAnzeige;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen der Warnungen-Anzeige: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// Öffnet das modale Fenster zur Anzeige aller E-Mail-Empfänger
+        /// </summary>
         private void EmpfaengerAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try

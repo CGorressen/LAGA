@@ -4,6 +4,7 @@ namespace LAGA
 {
     /// <summary>
     /// Datenmodell für einen Artikel mit allen erforderlichen Eigenschaften und Fremdschlüssel-Beziehungen
+    /// Erweitert um Warnsystem-Funktionalität
     /// </summary>
     public class Artikel
     {
@@ -78,6 +79,20 @@ namespace LAGA
         /// </summary>
         [Required]
         public int Maximalbestand { get; set; }
+
+        /// <summary>
+        /// Datum und Uhrzeit der letzten versendeten Warnung für diesen Artikel
+        /// Null = noch nie eine Warnung versendet
+        /// Verhindert mehrfaches Senden von Warnungen für denselben Artikel
+        /// </summary>
+        public DateTime? LetzteWarnungVersendet { get; set; }
+
+        /// <summary>
+        /// Gibt an, ob für diesen Artikel aktuell eine Warnung aktiv ist
+        /// True = Artikel hat Mindestbestand erreicht und Warnung ist aktiv
+        /// False = Artikel ist über Mindestbestand oder Warnung wurde zurückgesetzt
+        /// </summary>
+        public bool IstWarnungAktiv { get; set; }
 
         // Navigation Properties für Entity Framework
         /// <summary>

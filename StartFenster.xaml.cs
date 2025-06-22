@@ -8,6 +8,7 @@ namespace LAGA
     /// <summary>
     /// Standard-Startfenster mit Scanner-Integration
     /// Öffnet sich beim Programmstart und nach dem Schließen anderer Ansichten
+    /// Erweitert um automatische Bestandsüberwachung nach Scanner-Auslagerung
     /// </summary>
     public partial class StartFenster : UserControl
     {
@@ -87,6 +88,7 @@ namespace LAGA
 
         /// <summary>
         /// Verarbeitet einen gescannten Barcode und öffnet das Auslagern-Fenster
+        /// Erweitert um automatische Bestandsüberwachung nach Auslagerung
         /// </summary>
         private async void ProcessScannedBarcode(string barcode)
         {
@@ -102,7 +104,7 @@ namespace LAGA
                     if (artikelEinheit != null)
                     {
                         // Gültiger Barcode - Auslagern-Fenster öffnen
-                        OpenArtikelAuslagernDialog(barcode, artikelEinheit);
+                        await OpenArtikelAuslagernDialogAsync(barcode, artikelEinheit);
                     }
                     else
                     {
@@ -119,8 +121,9 @@ namespace LAGA
 
         /// <summary>
         /// Öffnet das ArtikelAuslagern-Dialog mit dem gescannten Barcode
+        /// Erweitert um automatische Bestandsüberwachung nach Auslagerung für ALLE betroffenen Artikel
         /// </summary>
-        private void OpenArtikelAuslagernDialog(string barcode, ArtikelEinheit artikelEinheit)
+        private async Task OpenArtikelAuslagernDialogAsync(string barcode, ArtikelEinheit artikelEinheit)
         {
             try
             {
@@ -128,8 +131,26 @@ namespace LAGA
                 var auslagernDialog = new ArtikelAuslagern(barcode, artikelEinheit);
                 auslagernDialog.Owner = Window.GetWindow(this);
 
-                // Dialog anzeigen
-                auslagernDialog.ShowDialog();
+                // Dialog anzeigen und nach dem Schließen Bestandsmonitor ausführen
+                var dialogResult = auslagernDialog.ShowDialog();
+
+                // WICHTIG: Wenn Artikel ausgelagert wurden, Bestandsmonitor für ALLE betroffenen Artikel ausführen
+                if (dialogResult == true && auslagernDialog.BetroffeneArtikelIds.Any())
+                {
+                    // Bestandsmonitor für jeden betroffenen Artikel ausführen
+                    foreach (int artikelId in auslagernDialog.BetroffeneArtikelIds)
+                    {
+                        await BestandsMonitor.PruefeBestandNachAenderungAsync(artikelId);
+                    }
+
+                    // Debug-Information
+                    System.Diagnostics.Debug.WriteLine($"Bestandsmonitor ausgeführt für {auslagernDialog.BetroffeneArtikelIds.Count} verschiedene Artikel");
+                }
+                else if (dialogResult == true)
+                {
+                    // Fallback: Nur der ursprünglich gescannte Artikel
+                    await BestandsMonitor.PruefeBestandNachAenderungAsync(artikelEinheit.ArtikelId);
+                }
 
                 // Nach dem Schließen Fokus wieder auf Scanner setzen
                 SetScannerFocus();

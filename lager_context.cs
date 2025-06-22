@@ -5,6 +5,7 @@ namespace LAGA
     /// <summary>
     /// Entity Framework Datenbank-Context für die LAGA SQLite-Datenbank
     /// Verwendet jetzt portable Pfade für die Datenbankdatei
+    /// Erweitert um Warnsystem-Funktionalität
     /// </summary>
     public class LagerContext : DbContext
     {
@@ -25,6 +26,7 @@ namespace LAGA
 
         /// <summary>
         /// Tabelle für Artikel in der Datenbank
+        /// Erweitert um Warnsystem-Felder (LetzteWarnungVersendet, IstWarnungAktiv)
         /// </summary>
         public DbSet<Artikel> Artikel { get; set; }
 
@@ -53,6 +55,7 @@ namespace LAGA
 
         /// <summary>
         /// Konfiguriert die Datenbank-Modelle und Beziehungen
+        /// Erweitert um Warnsystem-Konfiguration
         /// </summary>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -112,7 +115,7 @@ namespace LAGA
                 entity.ToTable("Lagerorte");
             });
 
-            // Konfiguration für Artikel-Tabelle
+            // Konfiguration für Artikel-Tabelle (erweitert um Warnsystem-Felder)
             modelBuilder.Entity<Artikel>(entity =>
             {
                 // Primärschlüssel mit Auto-Inkrement
@@ -129,6 +132,10 @@ namespace LAGA
                 entity.Property(a => a.Mindestbestand).IsRequired();
                 entity.Property(a => a.Maximalbestand).IsRequired();
                 entity.Property(a => a.IstEinzelteil).IsRequired();
+
+                // Warnsystem-Felder (neu hinzugefügt)
+                entity.Property(a => a.LetzteWarnungVersendet).IsRequired(false); // Optional (nullable)
+                entity.Property(a => a.IstWarnungAktiv).IsRequired().HasDefaultValue(false); // Standard: false
 
                 // Fremdschlüssel-Beziehungen
                 entity.Property(a => a.LieferantId).IsRequired();

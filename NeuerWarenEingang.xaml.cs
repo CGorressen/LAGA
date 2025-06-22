@@ -9,6 +9,7 @@ namespace LAGA
     /// <summary>
     /// Modales Fenster für den Wareneingang - ermöglicht das Einlagern von Artikel-Einheiten
     /// mit automatischer Barcode-Generierung und ZPL-Etikett-Druck für Zebra GX420t
+    /// Erweitert um automatische Bestandsüberwachung nach Einlagerung
     /// </summary>
     public partial class NeuerWarenEingang : Window
     {
@@ -92,6 +93,7 @@ namespace LAGA
         /// <summary>
         /// Führt den Wareneingang durch - erstellt ArtikelEinheiten mit eindeutigen Barcodes
         /// und druckt ZPL-Etiketten auf dem Zebra GX420t
+        /// Erweitert um automatische Bestandsüberwachung nach Einlagerung
         /// </summary>
         private async void BtnEinlagern_Click(object sender, RoutedEventArgs e)
         {
@@ -155,6 +157,9 @@ namespace LAGA
                                        $"Artikel: {_artikel.Bezeichnung}\n" +
                                        $"Eingelagerte Stück: {stueckzahl}\n",
                                        "Wareneingang abgeschlossen", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                        // WICHTIG: Bestandsmonitor für Warnungs-Prüfung nach Einlagerung
+                        await BestandsMonitor.PruefeBestandNachAenderungAsync(_artikel.Id);
                     }
                     else
                     {
@@ -169,6 +174,9 @@ namespace LAGA
                                        $"• Test-Etikett über Zebra Setup Utilities drucken\n\n" +
                                        $"ZPL-Dateien wurden gespeichert und können manuell gedruckt werden.",
                                        "Zebra-Drucker Problem", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                        // WICHTIG: Bestandsmonitor für Warnungs-Prüfung nach Einlagerung (auch bei Druck-Fehlern)
+                        await BestandsMonitor.PruefeBestandNachAenderungAsync(_artikel.Id);
                     }
                 }
                 catch (Exception etikettenEx)
@@ -210,6 +218,9 @@ namespace LAGA
                                        $"• USB/Netzwerk-Verbindung",
                                        "Zebra-Etikett Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
+
+                    // WICHTIG: Bestandsmonitor für Warnungs-Prüfung nach Einlagerung (auch bei Etikett-Fehlern)
+                    await BestandsMonitor.PruefeBestandNachAenderungAsync(_artikel.Id);
                 }
 
                 // Fenster schließen und Erfolg signalisieren

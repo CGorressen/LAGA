@@ -1,0 +1,180 @@
+﻿<UserControl x:Class="LAGA.WarnArtikelAnzeigen"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <!-- Style für DataGrid -->
+        <Style x:Key="DataGridStyle" TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="CanUserReorderColumns" Value="True"/>
+            <Setter Property="CanUserResizeColumns" Value="True"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#FFF5F5F5"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        </Style>
+
+        <!-- Style für DataGrid Header -->
+        <Style x:Key="DataGridHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#FF404040"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Height" Value="40"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Style für Schließen-Button -->
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF404040"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Width" Value="120"/>
+            <Setter Property="Margin" Value="10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Titel -->
+        <TextBlock Grid.Row="0" Text="Warnungen" FontSize="18" FontWeight="Bold" 
+                   Margin="0,0,0,15"/>
+
+        <!-- DataGrid für WarnArtikel -->
+        <DataGrid x:Name="dgWarnArtikel" Grid.Row="1" 
+                  Style="{StaticResource DataGridStyle}">
+
+            <DataGrid.Columns>
+                <!-- Versteckte ID-Spalte für interne Verwendung -->
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Visibility="Collapsed"/>
+
+                <!-- Datum -->
+                <DataGridTextColumn Header="Datum" Binding="{Binding Datum}" 
+                                    MinWidth="100" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Artikelbezeichnung -->
+                <DataGridTextColumn Header="Artikelbezeichnung" Binding="{Binding Artikelbezeichnung}" 
+                                    MinWidth="200" Width="*" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="ToolTip" Value="{Binding Artikelbezeichnung}"/>
+                            <Setter Property="TextWrapping" Value="NoWrap"/>
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Bestand (mit bedingter Farbgebung) -->
+                <DataGridTextColumn Header="Bestand" Binding="{Binding Bestand}" 
+                                    MinWidth="80" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <!-- Standard: Schwarz -->
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Style.Triggers>
+                                <!-- Rot: Bestand unter Mindestbestand -->
+                                <DataTrigger Binding="{Binding IstBestandKritisch}" Value="True">
+                                    <Setter Property="Foreground" Value="#FFD32F2F"/>
+                                </DataTrigger>
+                                <!-- Orange: Bestand gleich Mindestbestand -->
+                                <DataTrigger Binding="{Binding IstBestandWarnung}" Value="True">
+                                    <Setter Property="Foreground" Value="#FFFF9800"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Mindestbestand -->
+                <DataGridTextColumn Header="Mindestbestand" Binding="{Binding Mindestbestand}" 
+                                    MinWidth="120" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Benachrichtigung (mit bedingter Farbgebung) -->
+                <DataGridTextColumn Header="Benachrichtigung" Binding="{Binding Benachrichtigung}" 
+                                    MinWidth="120" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <!-- Standard: Schwarz -->
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Style.Triggers>
+                                <!-- Grün: Benachrichtigung erfolgreich -->
+                                <DataTrigger Binding="{Binding IstBenachrichtigungErfolgreich}" Value="True">
+                                    <Setter Property="Foreground" Value="#FF4CAF50"/>
+                                </DataTrigger>
+                                <!-- Rot: Benachrichtigung fehlgeschlagen -->
+                                <DataTrigger Binding="{Binding IstBenachrichtigungErfolgreich}" Value="False">
+                                    <Setter Property="Foreground" Value="#FFD32F2F"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+
+                <!-- Liefertermin -->
+                <DataGridTextColumn Header="Liefertermin" Binding="{Binding Liefertermin}" 
+                                    MinWidth="100" Width="Auto" HeaderStyle="{StaticResource DataGridHeaderStyle}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="8,4"/>
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+
+        </DataGrid>
+
+        <!-- Button-Bereich -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" 
+                    Margin="0,15,0,0">
+            <Button x:Name="btnAnsichtSchliessen" Content="Ansicht schließen"
+                    Style="{StaticResource CloseButtonStyle}"
+                    Click="BtnAnsichtSchliessen_Click"/>
+        </StackPanel>
+
+    </Grid>
+</UserControl>

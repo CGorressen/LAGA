@@ -150,8 +150,9 @@
                         <MenuItem Header="Lagerbestand" Style="{StaticResource DarkSubMenuItemStyle}"
                                   Click="LagerbestandAnzeigen_Click"/>
 
-                        <!-- Warnungen -->
-                        <MenuItem Header="Warnungen" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                        <!-- Warnungen (NEU: Mit Click-Handler) -->
+                        <MenuItem Header="Warnungen" Style="{StaticResource DarkSubMenuItemStyle}"
+                                  Click="WarnungenAnzeigen_Click"/>
 
                     </MenuItem>
 

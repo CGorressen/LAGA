@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using System.Windows;
 
 namespace LAGA
 {
     /// <summary>
     /// Zentraler Service für die Überwachung von Lagerbeständen und automatische Warnung bei Mindestbestand
     /// Wird bei jeder Lagerbewegung (Ein-/Auslagerung) aufgerufen
+    /// FINALE LÖSUNG: Trennt sauber zwischen Warnung-Erstellung und E-Mail-Erfolg
     /// </summary>
     public static class BestandsMonitor
     {
@@ -74,6 +74,7 @@ namespace LAGA
 
         /// <summary>
         /// Behandelt Artikel mit niedrigem Bestand (kleiner/gleich Mindestbestand)
+        /// FINALE LÖSUNG: Trennt Warnung-Erstellung von E-Mail-Erfolg
         /// </summary>
         /// <param name="context">Datenbank-Context</param>
         /// <param name="artikel">Der betroffene Artikel</param>
@@ -83,25 +84,36 @@ namespace LAGA
             // Prüfen ob bereits eine Warnung aktiv ist
             if (!artikel.IstWarnungAktiv)
             {
-                // Neue Warnung erstellen - E-Mail senden
+                // Warnung erstellen (IMMER, unabhängig vom E-Mail-Erfolg)
+                DateTime warnungsDatum = DateTime.Now;
+                artikel.IstWarnungAktiv = true;
+                artikel.WarnungErstelltAm = warnungsDatum;
+
+                // E-Mail senden versuchen
                 bool emailErfolgreich = await SendeWarnEmailAsync(artikel, aktuellerBestand);
 
-                // Artikel-Status aktualisieren
-                artikel.IstWarnungAktiv = true;
-                artikel.LetzteWarnungVersendet = DateTime.Now;
+                // E-Mail-Status separat verfolgen
+                if (emailErfolgreich)
+                {
+                    // E-Mail erfolgreich versendet
+                    artikel.LetzteWarnungVersendet = warnungsDatum;
+                    System.Diagnostics.Debug.WriteLine($"✅ Warnung für '{artikel.Bezeichnung}' erstellt und E-Mail erfolgreich versendet");
+                }
+                else
+                {
+                    // E-Mail fehlgeschlagen - LetzteWarnungVersendet bleibt null
+                    artikel.LetzteWarnungVersendet = null;
+                    System.Diagnostics.Debug.WriteLine($"⚠️ Warnung für '{artikel.Bezeichnung}' erstellt am {warnungsDatum:dd.MM.yyyy} - E-Mail konnte nicht versendet werden");
+                }
 
-                // Debug-Information
-                string emailStatus = emailErfolgreich ? "erfolgreich" : "fehlgeschlagen";
-                System.Diagnostics.Debug.WriteLine($"Warnung für Artikel '{artikel.Bezeichnung}' gesendet - E-Mail: {emailStatus}");
+                // Änderungen in Datenbank speichern
+                await context.SaveChangesAsync();
             }
             else
             {
-                // Warnung bereits aktiv - nur Status-Update ohne neue E-Mail
-                System.Diagnostics.Debug.WriteLine($"Warnung für Artikel '{artikel.Bezeichnung}' bereits aktiv - keine neue E-Mail");
+                // Warnung bereits aktiv - nur Debug-Info, keine Änderungen
+                System.Diagnostics.Debug.WriteLine($"ℹ️ Warnung für '{artikel.Bezeichnung}' bereits aktiv - keine neue E-Mail");
             }
-
-            // Änderungen in Datenbank speichern
-            await context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -114,10 +126,12 @@ namespace LAGA
             // Prüfen ob eine Warnung aktiv war und diese jetzt deaktiviert werden kann
             if (artikel.IstWarnungAktiv)
             {
+                // Warnung deaktivieren und alle Warnung-Felder zurücksetzen
                 artikel.IstWarnungAktiv = false;
-                
-                // Debug-Information
-                System.Diagnostics.Debug.WriteLine($"Warnung für Artikel '{artikel.Bezeichnung}' deaktiviert - Bestand wieder ausreichend");
+                artikel.WarnungErstelltAm = null;
+                artikel.LetzteWarnungVersendet = null;
+
+                System.Diagnostics.Debug.WriteLine($"✅ Warnung für '{artikel.Bezeichnung}' deaktiviert - Bestand wieder ausreichend");
 
                 // Änderungen in Datenbank speichern
                 await context.SaveChangesAsync();
@@ -136,18 +150,19 @@ namespace LAGA
             {
                 // Warn-E-Mail über GmailEmailService senden
                 bool erfolg = await GmailEmailService.SendeWarnEmailAsync(artikel, aktuellerBestand);
-                
+
                 return erfolg;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Fehler beim Senden der Warn-E-Mail für Artikel '{artikel.Bezeichnung}': {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Senden der Warn-E-Mail für '{artikel.Bezeichnung}': {ex.Message}");
                 return false;
             }
         }
 
         /// <summary>
         /// Holt alle Artikel mit aktiven Warnungen für die WarnArtikel-Anzeige
+        /// FINALE LÖSUNG: Verwendet separate Felder für perfekte Anzeige
         /// </summary>
         /// <returns>Liste der WarnArtikelAnzeigeDto für die UI</returns>
         public static async Task<List<WarnArtikelAnzeigeDto>> GetWarnArtikelAsync()
@@ -159,7 +174,7 @@ namespace LAGA
                     // Alle Artikel mit aktiven Warnungen laden
                     var warnArtikel = await context.Artikel
                         .Where(a => a.IstWarnungAktiv)
-                        .OrderByDescending(a => a.LetzteWarnungVersendet)
+                        .OrderByDescending(a => a.WarnungErstelltAm)
                         .ToListAsync();
 
                     var warnArtikelDtos = new List<WarnArtikelAnzeigeDto>();
@@ -174,7 +189,6 @@ namespace LAGA
                         var dto = new WarnArtikelAnzeigeDto
                         {
                             Id = artikel.Id,
-                            Datum = artikel.LetzteWarnungVersendet?.ToString("dd.MM.yyyy") ?? "Unbekannt",
                             Artikelbezeichnung = artikel.Bezeichnung,
                             Bestand = aktuellerBestand,
                             Mindestbestand = artikel.Mindestbestand,
@@ -183,27 +197,39 @@ namespace LAGA
                             OriginalArtikel = artikel
                         };
 
-                        // Benachrichtigung-Status setzen
-                        if (artikel.LetzteWarnungVersendet.HasValue)
+                        // DATUM-SPALTE: Basiert auf WarnungErstelltAm (immer verfügbar)
+                        if (artikel.WarnungErstelltAm.HasValue)
                         {
-                            dto.Benachrichtigung = artikel.LetzteWarnungVersendet.Value.ToString("dd.MM.yyyy");
-                            dto.IstBenachrichtigungErfolgreich = true;
+                            dto.Datum = artikel.WarnungErstelltAm.Value.ToString("dd.MM.yyyy");
                         }
                         else
                         {
-                            dto.Benachrichtigung = "Nicht versendet";
-                            dto.IstBenachrichtigungErfolgreich = false;
+                            dto.Datum = "Unbekannt"; // Sollte nie passieren bei aktiven Warnungen
                         }
 
-                        // Liefertermin berechnen (LetzteWarnung + Lieferzeit)
-                        if (artikel.LetzteWarnungVersendet.HasValue)
+                        // LIEFERTERMIN: Basiert auf WarnungErstelltAm + Lieferzeit
+                        if (artikel.WarnungErstelltAm.HasValue)
                         {
-                            var liefertermin = artikel.LetzteWarnungVersendet.Value.AddDays(artikel.Lieferzeit);
+                            var liefertermin = artikel.WarnungErstelltAm.Value.AddDays(artikel.Lieferzeit);
                             dto.Liefertermin = liefertermin.ToString("dd.MM.yyyy");
                         }
                         else
                         {
                             dto.Liefertermin = "Unbekannt";
+                        }
+
+                        // BENACHRICHTIGUNG-SPALTE: Basiert auf LetzteWarnungVersendet (E-Mail-Erfolg)
+                        if (artikel.LetzteWarnungVersendet.HasValue)
+                        {
+                            // E-Mail wurde erfolgreich versendet - grünes Datum
+                            dto.Benachrichtigung = artikel.LetzteWarnungVersendet.Value.ToString("dd.MM.yyyy");
+                            dto.IstBenachrichtigungErfolgreich = true;
+                        }
+                        else
+                        {
+                            // E-Mail konnte nicht versendet werden - rote "Nicht versendet" Meldung
+                            dto.Benachrichtigung = "Nicht versendet";
+                            dto.IstBenachrichtigungErfolgreich = false;
                         }
 
                         warnArtikelDtos.Add(dto);
@@ -214,7 +240,7 @@ namespace LAGA
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Fehler beim Laden der WarnArtikel: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Laden der WarnArtikel: {ex.Message}");
                 return new List<WarnArtikelAnzeigeDto>();
             }
         }
@@ -231,6 +257,7 @@ namespace LAGA
                 using (var context = new LagerContext())
                 {
                     var alleArtikel = await context.Artikel.ToListAsync();
+
                     int warnungenAktiviert = 0;
 
                     foreach (var artikel in alleArtikel)
@@ -243,11 +270,15 @@ namespace LAGA
                         if (bestand <= artikel.Mindestbestand && !artikel.IstWarnungAktiv)
                         {
                             artikel.IstWarnungAktiv = true;
+                            artikel.WarnungErstelltAm = DateTime.Now;
+                            // LetzteWarnungVersendet bleibt null (keine E-Mail versucht)
                             warnungenAktiviert++;
                         }
                         else if (bestand > artikel.Mindestbestand && artikel.IstWarnungAktiv)
                         {
                             artikel.IstWarnungAktiv = false;
+                            artikel.WarnungErstelltAm = null;
+                            artikel.LetzteWarnungVersendet = null;
                         }
                     }
 
@@ -257,7 +288,7 @@ namespace LAGA
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Fehler bei der Artikel-Vollprüfung: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler bei der Artikel-Vollprüfung: {ex.Message}");
                 return 0;
             }
         }

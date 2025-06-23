@@ -4,7 +4,7 @@ namespace LAGA
 {
     /// <summary>
     /// Datenmodell für einen Artikel mit allen erforderlichen Eigenschaften und Fremdschlüssel-Beziehungen
-    /// Erweitert um Warnsystem-Funktionalität
+    /// Erweitert um Warnsystem-Funktionalität mit separaten Feldern für Warnung-Erstellung und E-Mail-Erfolg
     /// </summary>
     public class Artikel
     {
@@ -80,10 +80,21 @@ namespace LAGA
         [Required]
         public int Maximalbestand { get; set; }
 
+        // ===== WARNSYSTEM-FELDER =====
+
         /// <summary>
-        /// Datum und Uhrzeit der letzten versendeten Warnung für diesen Artikel
-        /// Null = noch nie eine Warnung versendet
-        /// Verhindert mehrfaches Senden von Warnungen für denselben Artikel
+        /// Datum und Uhrzeit als die Warnung für diesen Artikel erstellt wurde
+        /// NULL = Keine aktive Warnung
+        /// Wird immer gesetzt wenn der Mindestbestand erreicht wird (unabhängig vom E-Mail-Erfolg)
+        /// Für Datum-Spalte und Liefertermin-Berechnung in der UI
+        /// </summary>
+        public DateTime? WarnungErstelltAm { get; set; }
+
+        /// <summary>
+        /// Datum und Uhrzeit der letzten ERFOLGREICH versendeten Warnung für diesen Artikel
+        /// NULL = E-Mail wurde noch nie erfolgreich versendet ODER beim letzten Versuch ist sie fehlgeschlagen
+        /// Nur bei erfolgreichem E-Mail-Versand gesetzt
+        /// Für Benachrichtigung-Spalte in der UI (grün/rot)
         /// </summary>
         public DateTime? LetzteWarnungVersendet { get; set; }
 

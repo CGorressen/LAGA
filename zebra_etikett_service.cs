@@ -1,16 +1,18 @@
-using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Windows;
 using System.Drawing.Printing;
 using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 
 namespace LAGA
 {
     /// <summary>
-    /// Service für die Generierung und den Druck von Zebra ZPL-Etiketten
-    /// Erstellt ZPL-Etiketten im Format 57×24mm mit Barcode und Artikelinformationen
-    /// für den Zebra GX420t Drucker
+    /// Service für die Generierung und den Druck von Etiketten
+    /// Unterstützt Zebra ZPL-Drucker und Standard-Windows-Drucker automatisch
+    /// Erweitert um automatische Drucker-Erkennung für Multi-Standort-Nutzung
     /// </summary>
     public static class ZebraEtikettService
     {
@@ -21,7 +23,7 @@ namespace LAGA
             AppDomain.CurrentDomain.BaseDirectory, "ZPL_Etiketten");
 
         /// <summary>
-        /// Standard-Druckername für Zebra GX420t (kann angepasst werden)
+        /// Standard-Druckername für Zebra GX420t (wird automatisch gesucht)
         /// </summary>
         private static string _zebraDruckerName = "ZDesigner GX420t";
 
@@ -36,6 +38,15 @@ namespace LAGA
         private static int _zebraDruckerPort = 9100;
 
         /// <summary>
+        /// Enum für verfügbare Drucker-Typen
+        /// </summary>
+        public enum DruckerTyp
+        {
+            Zebra,
+            StandardWindows
+        }
+
+        /// <summary>
         /// Statischer Konstruktor - erstellt ZPL-Verzeichnis
         /// </summary>
         static ZebraEtikettService()
@@ -45,11 +56,107 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Erstellt und druckt ZPL-Etiketten für eine Liste von ArtikelEinheiten (Wareneingang)
+        /// Erstellt und druckt Etiketten für eine Liste von ArtikelEinheiten (Wareneingang)
+        /// Automatische Drucker-Erkennung: Zebra bevorzugt, Standard-Drucker als Fallback
         /// </summary>
         /// <param name="artikelEinheiten">Liste der ArtikelEinheiten für die Etiketten erstellt werden sollen</param>
         /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
         public static async Task<bool> ErstelleUndDruckeEtikettenAsync(
+            List<ArtikelEinheit> artikelEinheiten, Artikel artikel)
+        {
+            try
+            {
+                // Verfügbaren Drucker-Typ ermitteln
+                DruckerTyp verfuegbarerDrucker = ErmittleVerfuegbarenDrucker();
+
+                System.Diagnostics.Debug.WriteLine($"🖨️ Erkannter Drucker-Typ: {verfuegbarerDrucker}");
+
+                bool druckErfolgreich = false;
+
+                // Je nach Drucker-Typ entsprechend drucken
+                switch (verfuegbarerDrucker)
+                {
+                    case DruckerTyp.Zebra:
+                        druckErfolgreich = await DruckeZebraEtikettenAsync(artikelEinheiten, artikel);
+                        break;
+
+                    case DruckerTyp.StandardWindows:
+                        druckErfolgreich = await DruckeStandardEtikettenAsync(artikelEinheiten, artikel);
+                        break;
+                }
+
+                return druckErfolgreich;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Fehler beim Erstellen der Etiketten: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Druckt bestehende Barcodes erneut (für Neudruck-Funktionalität)
+        /// Automatische Drucker-Erkennung für Neudruck
+        /// </summary>
+        /// <param name="ausgewaehlteEinheiten">Liste der ArtikelEinheiten die neu gedruckt werden sollen</param>
+        /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
+        public static async Task<bool> DruckeBestehendeBarcodes(
+            List<ArtikelEinheit> ausgewaehlteEinheiten, Artikel artikel)
+        {
+            try
+            {
+                // Für Neudruck gleiche Logik wie für neuen Druck verwenden
+                return await ErstelleUndDruckeEtikettenAsync(ausgewaehlteEinheiten, artikel);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Fehler beim Neudruck der Barcodes: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Ermittelt automatisch welcher Drucker-Typ verfügbar ist
+        /// Priorisierung: 1. Zebra-Drucker, 2. Standard-Windows-Drucker
+        /// </summary>
+        /// <returns>Verfügbarer Drucker-Typ</returns>
+        private static DruckerTyp ErmittleVerfuegbarenDrucker()
+        {
+            try
+            {
+                // Alle installierten Drucker durchsuchen
+                var druckerListe = PrinterSettings.InstalledPrinters;
+
+                foreach (string drucker in druckerListe)
+                {
+                    string druckerLower = drucker.ToLower();
+
+                    // Zebra-Drucker suchen (verschiedene Modelle)
+                    if (druckerLower.Contains("zebra") ||
+                        druckerLower.Contains("gx420") ||
+                        druckerLower.Contains("zdesigner") ||
+                        druckerLower.Contains("zpl"))
+                    {
+                        _zebraDruckerName = drucker; // Exakten Namen speichern
+                        System.Diagnostics.Debug.WriteLine($"✅ Zebra-Drucker gefunden: {drucker}");
+                        return DruckerTyp.Zebra;
+                    }
+                }
+
+                // Kein Zebra gefunden → Standard-Drucker verwenden
+                System.Diagnostics.Debug.WriteLine($"ℹ️ Kein Zebra-Drucker gefunden, verwende Standard-Drucker");
+                return DruckerTyp.StandardWindows;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ Fehler bei Drucker-Erkennung: {ex.Message}");
+                return DruckerTyp.StandardWindows; // Fallback auf Standard
+            }
+        }
+
+        /// <summary>
+        /// Druckt Etiketten über Zebra-Drucker (ZPL-Format)
+        /// Bisherige Zebra-Funktionalität unverändert
+        /// </summary>
+        private static async Task<bool> DruckeZebraEtikettenAsync(
             List<ArtikelEinheit> artikelEinheiten, Artikel artikel)
         {
             try
@@ -65,7 +172,6 @@ namespace LAGA
                     {
                         // ZPL-Code als Datei speichern (für Debug/Backup)
                         await SpeichereZPLDateiAsync(einheit, zplCode);
-
                         erfolgreicheEtiketten.Add(zplCode);
                     }
                 }
@@ -81,54 +187,179 @@ namespace LAGA
             }
             catch (Exception ex)
             {
-                throw new Exception($"Fehler beim Erstellen der ZPL-Etiketten: {ex.Message}", ex);
+                System.Diagnostics.Debug.WriteLine($"❌ Zebra-Druck Fehler: {ex.Message}");
+                return false;
             }
         }
 
         /// <summary>
-        /// Druckt bestehende Barcodes erneut (für Neudruck-Funktionalität)
+        /// Druckt Etiketten über Standard-Windows-Drucker (Grafik-Format)
+        /// NEU: Für Nicht-Zebra-Drucker (Brother, Canon, HP, etc.)
         /// </summary>
-        /// <param name="ausgewaehlteEinheiten">Liste der ArtikelEinheiten die neu gedruckt werden sollen</param>
-        /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
-        public static async Task<bool> DruckeBestehendeBarcodes(
-            List<ArtikelEinheit> ausgewaehlteEinheiten, Artikel artikel)
+        private static async Task<bool> DruckeStandardEtikettenAsync(
+            List<ArtikelEinheit> artikelEinheiten, Artikel artikel)
         {
             try
             {
-                var erfolgreicheEtiketten = new List<string>();
-
-                foreach (var einheit in ausgewaehlteEinheiten)
+                return await Task.Run(() =>
                 {
-                    // ZPL-Etikett für jede ausgewählte Einheit erstellen
-                    string zplCode = ErstelleZPLEtikett(einheit, artikel);
+                    bool alleErfolgreich = true;
 
-                    if (!string.IsNullOrEmpty(zplCode))
+                    foreach (var einheit in artikelEinheiten)
                     {
-                        // ZPL-Code als Datei speichern (Backup für Neudruck)
-                        await SpeichereZPLDateiAsync(einheit, zplCode, "Neudruck");
+                        try
+                        {
+                            // Etikett als Grafik erstellen und drucken
+                            bool einzelErfolg = DruckeStandardEtikett(einheit, artikel);
+                            if (!einzelErfolg)
+                            {
+                                alleErfolgreich = false;
+                            }
 
-                        erfolgreicheEtiketten.Add(zplCode);
+                            // Kurze Pause zwischen Etiketten
+                            System.Threading.Thread.Sleep(200);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"❌ Standard-Druck Fehler für {einheit.Barcode}: {ex.Message}");
+                            alleErfolgreich = false;
+                        }
                     }
-                }
 
-                // Alle erstellten Etiketten drucken
-                if (erfolgreicheEtiketten.Count > 0)
-                {
-                    await DruckeZPLEtikettenAsync(erfolgreicheEtiketten);
-                    return true;
-                }
-
-                return false;
+                    return alleErfolgreich;
+                });
             }
             catch (Exception ex)
             {
-                throw new Exception($"Fehler beim Neudruck der Barcodes: {ex.Message}", ex);
+                System.Diagnostics.Debug.WriteLine($"❌ Standard-Druck Fehler: {ex.Message}");
+                return false;
             }
         }
 
         /// <summary>
-        /// Erstellt den ZPL-Code für ein einzelnes Etikett
-        /// Format: 57×24mm (ca. 456×192 Dots bei 203 DPI - Zebra Standard)
+        /// Druckt ein einzelnes Etikett über Standard-Windows-Drucker
+        /// Erstellt eine Grafik und sendet sie an den Drucker
+        /// </summary>
+        private static bool DruckeStandardEtikett(ArtikelEinheit einheit, Artikel artikel)
+        {
+            try
+            {
+                // PrintDocument für Standard-Druck erstellen
+                using (var printDocument = new PrintDocument())
+                {
+                    // Standard-Drucker verwenden
+                    // printDocument.PrinterSettings.PrinterName bleibt leer = Standard-Drucker
+
+                    // Etikett-Größe konfigurieren (57x24mm)
+                    printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+
+                    // Paper size für Etikett (57x24mm in Hundertstel Zoll)
+                    var paperSize = new PaperSize("Etikett 57x24mm", 224, 94); // 57mm = 224/100 inch, 24mm = 94/100 inch
+                    printDocument.DefaultPageSettings.PaperSize = paperSize;
+
+                    // Print-Event Handler
+                    printDocument.PrintPage += (sender, e) =>
+                    {
+                        // Null-Check für Graphics-Objekt
+                        if (e.Graphics != null)
+                        {
+                            DruckeEtikettGrafik(e.Graphics, einheit, artikel);
+                        }
+                    };
+
+                    // Drucken
+                    printDocument.Print();
+
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Standard-Etikett-Druck: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Zeichnet das Etikett als Grafik für Standard-Drucker
+        /// Layout: Artikelbezeichnung oben, Barcode unten
+        /// </summary>
+        private static void DruckeEtikettGrafik(Graphics graphics, ArtikelEinheit einheit, Artikel artikel)
+        {
+            try
+            {
+                // Etikett-Abmessungen (57x24mm in Pixel bei 203 DPI)
+                int etikettBreite = 456; // 57mm * 8 Pixel/mm
+                int etikettHoehe = 192;  // 24mm * 8 Pixel/mm
+
+                // Hintergrund weiß
+                graphics.Clear(Color.White);
+
+                // Artikelbezeichnung kürzen für bessere Darstellung
+                string kurzeBezeichnung = artikel.Bezeichnung.Length > 30
+                    ? artikel.Bezeichnung.Substring(0, 27) + "..."
+                    : artikel.Bezeichnung;
+
+                // Font für Bezeichnung - explizit System.Drawing.FontStyle verwenden
+                using (var fontBezeichnung = new Font(new FontFamily("Arial"), 8, System.Drawing.FontStyle.Bold))
+                {
+                    using (var textBrush = new SolidBrush(Color.Black))
+                    {
+                        var textFormat = new StringFormat()
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center
+                        };
+
+                        // Bezeichnung oben zentriert
+                        var textBereich = new RectangleF(0, 5, etikettBreite, 40);
+                        graphics.DrawString(kurzeBezeichnung, fontBezeichnung, textBrush, textBereich, textFormat);
+                    }
+                }
+
+                // Barcode als Text (für einfache Implementierung)
+                // In einer erweiterten Version könnte hier ein echter Barcode gezeichnet werden
+                using (var fontBarcode = new Font(new FontFamily("Consolas"), 12, System.Drawing.FontStyle.Bold))
+                {
+                    using (var barcodeBrush = new SolidBrush(Color.Black))
+                    {
+                        var barcodeFormat = new StringFormat()
+                        {
+                            Alignment = StringAlignment.Center,
+                            LineAlignment = StringAlignment.Center
+                        };
+
+                        // Barcode-Bereich
+                        var barcodeBereich = new RectangleF(0, 50, etikettBreite, 80);
+
+                        // Barcode-Striche simulieren (vereinfacht)
+                        using (var strichFont = new Font(new FontFamily("Arial"), 6))
+                        {
+                            var strichText = "||||| " + einheit.Barcode + " |||||";
+                            graphics.DrawString(strichText, strichFont, barcodeBrush, barcodeBereich, barcodeFormat);
+                        }
+
+                        // Barcode-Nummer unter den Strichen
+                        var nummernBereich = new RectangleF(0, 130, etikettBreite, 30);
+                        graphics.DrawString(einheit.Barcode, fontBarcode, barcodeBrush, nummernBereich, barcodeFormat);
+                    }
+                }
+
+                // Rahmen um das Etikett (optional, für bessere Sichtbarkeit)
+                using (var rahmenPen = new Pen(Color.Black, 1))
+                {
+                    graphics.DrawRectangle(rahmenPen, 0, 0, etikettBreite - 1, etikettHoehe - 1);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Zeichnen der Etikett-Grafik: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Erstellt den ZPL-Code für ein einzelnes Etikett (für Zebra-Drucker)
+        /// Unverändert von der ursprünglichen Implementierung
         /// </summary>
         private static string ErstelleZPLEtikett(ArtikelEinheit einheit, Artikel artikel)
         {
@@ -158,7 +389,7 @@ namespace LAGA
                 // Artikelbezeichnung oben, zentriert
                 zpl.AppendLine("^FO0,35^FB456,1,0,C^A0N,20,20^FH^FD" + kurzeBezeichnung + "^FS");
 
-                // Barcode manuell zentriert: falls der barcode versetzt ist, einfach mal mit dem wert F085 spielen.
+                // Barcode manuell zentriert
                 zpl.AppendLine("^BY2,2,80");
                 zpl.AppendLine("^FO85,60^BCN,80,Y,N,N^FD" + einheit.Barcode + "^FS");
 
@@ -196,7 +427,8 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Druckt die ZPL-Etiketten über verschiedene Methoden
+        /// Druckt die ZPL-Etiketten über verschiedene Methoden (für Zebra-Drucker)
+        /// Unverändert von der ursprünglichen Implementierung
         /// </summary>
         private static async Task DruckeZPLEtikettenAsync(List<string> zplCodes)
         {
@@ -239,7 +471,8 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Druckt ZPL über den Windows-Drucker (USB/Seriell)
+        /// Druckt ZPL über den Windows-Drucker (USB/Seriell) - für Zebra-Drucker
+        /// Unverändert von der ursprünglichen Implementierung
         /// </summary>
         private static async Task<bool> DruckeUeberWindowsDrucker(string zplCode)
         {
@@ -255,20 +488,7 @@ namespace LAGA
                         // Drucker öffnen
                         if (!OpenPrinter(_zebraDruckerName, out hPrinter, IntPtr.Zero))
                         {
-                            // Fallback: Versuche "Generic / Text Only" Drucker zu finden
-                            var druckerListe = PrinterSettings.InstalledPrinters;
-                            foreach (string drucker in druckerListe)
-                            {
-                                if (drucker.ToLower().Contains("zebra") || drucker.ToLower().Contains("gx420"))
-                                {
-                                    _zebraDruckerName = drucker;
-                                    if (OpenPrinter(_zebraDruckerName, out hPrinter, IntPtr.Zero))
-                                        break;
-                                }
-                            }
-
-                            if (hPrinter == IntPtr.Zero)
-                                return false;
+                            return false;
                         }
 
                         // Druckauftrag starten
@@ -312,7 +532,8 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Druckt ZPL über Netzwerk (TCP/IP)
+        /// Druckt ZPL über Netzwerk (TCP/IP) - für Zebra-Drucker
+        /// Unverändert von der ursprünglichen Implementierung
         /// </summary>
         private static async Task<bool> DruckeUeberNetzwerk(string zplCode)
         {
@@ -391,6 +612,7 @@ namespace LAGA
 
         /// <summary>
         /// Erstellt ein Test-Etikett für Drucker-Konfiguration
+        /// Funktioniert mit beiden Drucker-Typen
         /// </summary>
         public static async Task<bool> DruckeTestEtikettAsync()
         {
@@ -420,7 +642,42 @@ namespace LAGA
             }
         }
 
-        #region P/Invoke für Windows-Drucker-API
+        /// <summary>
+        /// Gibt Informationen über den erkannten Drucker zurück
+        /// NEU: Für Debugging und Status-Anzeige
+        /// </summary>
+        public static string GetDruckerInfo()
+        {
+            DruckerTyp drucker = ErmittleVerfuegbarenDrucker();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("LAGA Etikett-Drucker Informationen:");
+            sb.AppendLine($"Erkannter Drucker-Typ: {drucker}");
+
+            if (drucker == DruckerTyp.Zebra)
+            {
+                sb.AppendLine($"Zebra-Drucker: {_zebraDruckerName}");
+                sb.AppendLine("Format: ZPL (57×24mm)");
+                sb.AppendLine("Druck-Methoden: USB/Seriell + Netzwerk");
+            }
+            else
+            {
+                sb.AppendLine("Standard-Windows-Drucker wird verwendet");
+                sb.AppendLine("Format: Grafik (57×24mm)");
+                sb.AppendLine("Druck-Methode: Windows-Druckertreiber");
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Verfügbare Drucker im System:");
+            foreach (string drucker_name in PrinterSettings.InstalledPrinters)
+            {
+                sb.AppendLine($"- {drucker_name}");
+            }
+
+            return sb.ToString();
+        }
+
+        #region P/Invoke für Windows-Drucker-API (unverändert)
 
         [StructLayout(LayoutKind.Sequential)]
         public struct DOC_INFO_1

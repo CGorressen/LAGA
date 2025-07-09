@@ -12,12 +12,14 @@ using MimeKit;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Util.Store;
 
 namespace LAGA
 {
     /// <summary>
     /// Service für die Kommunikation mit der Gmail API
     /// Erweiterbare Struktur für Test-E-Mails und Warn-E-Mails
+    /// Erweitert um verbesserte Token-Persistierung für längere Authentifizierung
     /// </summary>
     public static class GmailEmailService
     {
@@ -68,6 +70,12 @@ namespace LAGA
         private static string? CredentialsFilePath => FindCredentialsFile();
 
         /// <summary>
+        /// Pfad zum Token-Speicher-Ordner für persistente Authentifizierung
+        /// Wird im Credentials-Ordner als Unterordner "tokens" erstellt
+        /// </summary>
+        private static string TokenStorePath => Path.Combine(PathHelper.CredentialsDirectory, "tokens");
+
+        /// <summary>
         /// Prüft ob eine Gmail API Credentials-Datei vorhanden ist
         /// Sucht automatisch nach JSON-Dateien im Credentials-Ordner
         /// </summary>
@@ -80,6 +88,7 @@ namespace LAGA
         /// <summary>
         /// Erstellt und authentifiziert den Gmail Service
         /// Optimiert für OAuth 2.0 Client Credentials (Desktop-Anwendung)
+        /// VERBESSERT: Verwendet FileDataStore für persistente Token-Speicherung
         /// </summary>
         /// <returns>Authentifizierter Gmail Service oder null bei Fehler</returns>
         private static async Task<GmailService?> CreateGmailServiceAsync()
@@ -93,16 +102,29 @@ namespace LAGA
                     throw new FileNotFoundException($"Keine JSON-Credentials-Datei im Ordner {PathHelper.CredentialsDirectory} gefunden");
                 }
 
-                // OAuth 2.0 Flow für Desktop-Anwendung
+                // Token-Speicher-Ordner erstellen falls nicht vorhanden
+                Directory.CreateDirectory(TokenStorePath);
+
+                // OAuth 2.0 Flow für Desktop-Anwendung mit FileDataStore
                 UserCredential userCredential;
                 using (var stream = new FileStream(credentialsPath, FileMode.Open, FileAccess.Read))
                 {
+                    // WICHTIG: FileDataStore speichert Refresh Token persistent im Dateisystem
+                    // Das verhindert wiederholte Logins nach Token-Ablauf
                     userCredential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         GoogleClientSecrets.FromStream(stream).Secrets,
                         Scopes,
-                        "user",
-                        System.Threading.CancellationToken.None);
+                        "laga_user", // Eindeutige User-ID für Token-Speicherung
+                        System.Threading.CancellationToken.None,
+                        new FileDataStore(TokenStorePath, true) // Persistente Token-Speicherung
+                    );
                 }
+
+                // Debug-Information über Token-Status
+                System.Diagnostics.Debug.WriteLine($"Gmail Token-Status:");
+                System.Diagnostics.Debug.WriteLine($"- Access Token vorhanden: {!string.IsNullOrEmpty(userCredential.Token?.AccessToken)}");
+                System.Diagnostics.Debug.WriteLine($"- Refresh Token vorhanden: {!string.IsNullOrEmpty(userCredential.Token?.RefreshToken)}");
+                System.Diagnostics.Debug.WriteLine($"- Token-Speicher: {TokenStorePath}");
 
                 // Gmail Service mit User Credentials erstellen
                 var service = new GmailService(new BaseClientService.Initializer()
@@ -133,6 +155,32 @@ namespace LAGA
                 }
 
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Löscht gespeicherte Tokens und erzwingt eine neue Authentifizierung
+        /// Nützlich bei Authentifizierungsproblemen oder Benutzer-Wechsel
+        /// </summary>
+        public static void ResetAuthentication()
+        {
+            try
+            {
+                if (Directory.Exists(TokenStorePath))
+                {
+                    // Alle Token-Dateien löschen
+                    var tokenFiles = Directory.GetFiles(TokenStorePath, "*", SearchOption.AllDirectories);
+                    foreach (var file in tokenFiles)
+                    {
+                        File.Delete(file);
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"Gmail Token-Cache geleert: {tokenFiles.Length} Dateien gelöscht");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fehler beim Löschen der Token: {ex.Message}");
             }
         }
 
@@ -294,8 +342,13 @@ namespace LAGA
                         return false;
                     }
 
-                    // Warn-E-Mail-Inhalt erstellen
-                    string betreff = $"LAGA Warnung: {artikel.Bezeichnung} - Mindestbestand erreicht";
+                    // Artikelbezeichnung für den Betreff auf max. 40 Zeichen kürzen
+                    string kurzeBezeichnung = KuerzeArtikelBezeichnungFuerBetreff(artikel.Bezeichnung);
+
+                    // Warn-E-Mail-Betreff mit gekürzter Artikelbezeichnung erstellen
+                    string betreff = $"LAGA Warnung: {kurzeBezeichnung} - Mindestbestand erreicht";
+
+                    // Warn-E-Mail-Inhalt erstellen (hier wird die vollständige Bezeichnung verwendet)
                     string nachricht = ErstelleWarnEmailInhalt(artikel, aktuellerBestand);
 
                     // E-Mail an alle Empfänger senden
@@ -347,6 +400,33 @@ namespace LAGA
         }
 
         /// <summary>
+        /// Kürzt die Artikelbezeichnung für den E-Mail-Betreff auf maximal 40 Zeichen
+        /// Fügt "..." hinzu wenn die Bezeichnung gekürzt wurde
+        /// </summary>
+        /// <param name="artikelBezeichnung">Die vollständige Artikelbezeichnung</param>
+        /// <returns>Gekürzte Bezeichnung (max. 40 Zeichen)</returns>
+        private static string KuerzeArtikelBezeichnungFuerBetreff(string artikelBezeichnung)
+        {
+            // Null oder leere Strings abfangen
+            if (string.IsNullOrWhiteSpace(artikelBezeichnung))
+            {
+                return "Unbekannter Artikel";
+            }
+
+            // Führende und nachfolgende Leerzeichen entfernen
+            string bereinigtBezeichnung = artikelBezeichnung.Trim();
+
+            // Wenn die Bezeichnung 40 Zeichen oder weniger hat, unverändert zurückgeben
+            if (bereinigtBezeichnung.Length <= 40)
+            {
+                return bereinigtBezeichnung;
+            }
+
+            // Auf 37 Zeichen kürzen und "..." anhängen (37 + 3 = 40 Zeichen)
+            return bereinigtBezeichnung.Substring(0, 37) + "...";
+        }
+
+        /// <summary>
         /// Erstellt den Inhalt der Warn-E-Mail entsprechend der Dokumentation
         /// Plain Text Format für bessere Spam-Vermeidung
         /// </summary>
@@ -359,13 +439,13 @@ namespace LAGA
 
             // Header
             sb.AppendLine("Dies ist eine automatisch generierte Nachricht des Lagerverwaltungssystems LAGA.");
-            sb.AppendLine();
             sb.AppendLine("Folgender Artikel hat den Mindestbestand erreicht und muss nachbestellt werden:");
             sb.AppendLine();
-            sb.AppendLine("--------------------------------------------------");
+            sb.AppendLine();
 
-            // Artikel-Informationen
+            // Artikel-Informationen (hier wird die vollständige Bezeichnung verwendet)
             sb.AppendLine(artikel.Bezeichnung);
+            sb.AppendLine();
             sb.AppendLine($"Aktueller Bestand: {aktuellerBestand}");
             sb.AppendLine($"Mindestbestand: {artikel.Mindestbestand}");
             sb.AppendLine($"Maximalbestand: {artikel.Maximalbestand}");
@@ -373,10 +453,7 @@ namespace LAGA
             // Benötigte Einheiten berechnen (Maximalbestand - aktueller Bestand)
             int benoetigteEinheiten = Math.Abs(artikel.Maximalbestand - aktuellerBestand);
             sb.AppendLine($"Benötigte Einheiten: {benoetigteEinheiten}");
-            sb.AppendLine("--------------------------------------------------");
-
-            // Kostenstelle
-            sb.AppendLine($"Kostenstelle: {artikel.Kostenstelle?.Bezeichnung ?? "Unbekannt"}");
+            sb.AppendLine();
             sb.AppendLine();
 
             // Lieferanten-Informationen
@@ -398,7 +475,12 @@ namespace LAGA
                 sb.AppendLine($"E-Mail: {artikel.Hersteller.Email}");
                 sb.AppendLine($"Telefon: {artikel.Hersteller.Telefon}");
                 sb.AppendLine($"Artikelnummer: {artikel.ExterneArtikelIdHersteller}");
+                sb.AppendLine();
             }
+
+            // Kostenstelle
+            sb.AppendLine($"Kostenstelle: {artikel.Kostenstelle?.Bezeichnung ?? "Unbekannt"}");
+            sb.AppendLine();
 
             sb.AppendLine();
             sb.AppendLine("Mit freundlichen Grüßen");
@@ -475,6 +557,7 @@ namespace LAGA
             var sb = new StringBuilder();
             sb.AppendLine("Gmail API Konfiguration:");
             sb.AppendLine($"Credentials-Ordner: {PathHelper.CredentialsDirectory}");
+            sb.AppendLine($"Token-Speicher: {TokenStorePath}");
 
             var credentialsPath = CredentialsFilePath;
             if (!string.IsNullOrEmpty(credentialsPath))
@@ -485,6 +568,17 @@ namespace LAGA
             else
             {
                 sb.AppendLine("Keine Credentials-Datei gefunden");
+            }
+
+            // Token-Dateien prüfen
+            if (Directory.Exists(TokenStorePath))
+            {
+                var tokenFiles = Directory.GetFiles(TokenStorePath, "*", SearchOption.AllDirectories);
+                sb.AppendLine($"Gespeicherte Token-Dateien: {tokenFiles.Length}");
+            }
+            else
+            {
+                sb.AppendLine("Token-Speicher-Ordner existiert nicht");
             }
 
             sb.AppendLine($"Credentials verfügbar: {AreCredentialsAvailable()}");

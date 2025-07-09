@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.EntityFrameworkCore;
@@ -171,8 +170,7 @@ namespace LAGA
                                        $"• USB-Verbindung zum Zebra GX420t prüfen\n" +
                                        $"• Zebra-Treiber installieren/aktualisieren\n" +
                                        $"• Drucker-Name in Windows überprüfen\n" +
-                                       $"• Test-Etikett über Zebra Setup Utilities drucken\n\n" +
-                                       $"ZPL-Dateien wurden gespeichert und können manuell gedruckt werden.",
+                                       $"• Test-Etikett über Zebra Setup Utilities drucken",
                                        "Zebra-Drucker Problem", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                         // WICHTIG: Bestandsmonitor für Warnungs-Prüfung nach Einlagerung (auch bei Druck-Fehlern)
@@ -183,41 +181,14 @@ namespace LAGA
                 {
                     ShowStatus("⚠ Einlagerung OK, aber Zebra-Druck-Fehler", Brushes.Orange);
 
-                    // Prüfen ob ZPL-Dateien erstellt wurden, auch wenn Druck fehlschlug
-                    string zplVerzeichnis = ZebraEtikettService.GetEtikettenVerzeichnis();
-                    bool zplDateienErstellt = Directory.GetFiles(zplVerzeichnis, "*.zpl")
-                        .Any(f => Path.GetFileName(f).StartsWith($"{_artikel.Id}_"));
-
-                    if (zplDateienErstellt)
-                    {
-                        var result = MessageBox.Show($"Wareneingang erfolgreich!\n\n" +
-                                       $"Die ZPL-Etiketten wurden erstellt, aber der Zebra-Druck war nicht möglich:\n" +
-                                       $"{etikettenEx.Message}\n\n" +
-                                       $"Lösungsmöglichkeiten:\n" +
-                                       $"• Zebra GX420t USB-Verbindung prüfen\n" +
-                                       $"• Zebra-Treiber neu installieren\n" +
-                                       $"• ZPL-Dateien manuell drucken über Zebra Setup Utilities\n\n" +
-                                       $"ZPL-Verzeichnis:\n{zplVerzeichnis}\n\n" +
-                                       $"Soll das ZPL-Verzeichnis jetzt geöffnet werden?",
-                                       "Manueller Zebra-Druck erforderlich",
-                                       MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                        if (result == MessageBoxResult.Yes)
-                        {
-                            ZebraTestService.OeffneZPLVerzeichnis();
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show($"Wareneingang erfolgreich, aber Fehler beim Erstellen der Zebra-Etiketten:\n\n" +
-                                       $"{etikettenEx.Message}\n\n" +
-                                       $"Die Artikel-Einheiten wurden korrekt eingelagert.\n\n" +
-                                       $"Bitte prüfen Sie:\n" +
-                                       $"• Zebra GX420t Drucker-Konfiguration\n" +
-                                       $"• Windows-Drucker-Einstellungen\n" +
-                                       $"• USB/Netzwerk-Verbindung",
-                                       "Zebra-Etikett Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    }
+                    MessageBox.Show($"Wareneingang erfolgreich, aber Fehler beim Erstellen der Zebra-Etiketten:\n\n" +
+                                   $"{etikettenEx.Message}\n\n" +
+                                   $"Die Artikel-Einheiten wurden korrekt eingelagert.\n\n" +
+                                   $"Bitte prüfen Sie:\n" +
+                                   $"• Zebra GX420t Drucker-Konfiguration\n" +
+                                   $"• Windows-Drucker-Einstellungen\n" +
+                                   $"• USB/Netzwerk-Verbindung",
+                                   "Zebra-Etikett Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
 
                     // WICHTIG: Bestandsmonitor für Warnungs-Prüfung nach Einlagerung (auch bei Etikett-Fehlern)
                     await BestandsMonitor.PruefeBestandNachAenderungAsync(_artikel.Id);

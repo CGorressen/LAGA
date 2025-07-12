@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+	  <None Remove="Bilder\lagaStart.png" />
     <None Remove="Bilder\scanner.png" />
   </ItemGroup>
 
@@ -22,8 +23,12 @@
     <PackageReference Include="ZXing.Net" Version="0.16.10" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="Bilder\scanner.png" />
-  </ItemGroup>
+	<ItemGroup>
+		<!-- Splash Screen: Zeigt automatisch lagaStart.png beim Programmstart -->
+		<SplashScreen Include="Bilder\lagaStart.png" />
+		<!-- Normale Resource für andere Zwecke -->
+		<Resource Include="Bilder\scanner.png" />
+	</ItemGroup>
+
 
 </Project>

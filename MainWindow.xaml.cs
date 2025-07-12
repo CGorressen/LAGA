@@ -234,5 +234,10 @@ namespace LAGA
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private void DruckerEinrichten_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

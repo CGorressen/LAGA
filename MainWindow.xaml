@@ -168,6 +168,14 @@
 
                         <!-- Datenbanksicherung -->
                         <MenuItem Header="Datenbanksicherung" Style="{StaticResource DarkSubMenuItemStyle}"/>
+                        <!-- Drucker einrichten -->
+                        <MenuItem Header="Drucker einrichten" Style="{StaticResource DarkSubMenuItemStyle}"
+                            Click="DruckerEinrichten_Click">
+
+                    </MenuItem>
+
+                    
+                        
 
                     </MenuItem>
 

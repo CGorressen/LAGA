@@ -237,7 +237,40 @@ namespace LAGA
 
         private void DruckerEinrichten_Click(object sender, RoutedEventArgs e)
         {
+            try
+            {
+                // Drucker-Einrichtungs-Fenster erstellen
+                var druckerEinrichtungsFenster = new DruckerEinrichten();
+                druckerEinrichtungsFenster.Owner = this;
 
+                // Als modaler Dialog anzeigen
+                bool? dialogResult = druckerEinrichtungsFenster.ShowDialog();
+
+                // Prüfen ob Einstellungen gespeichert wurden
+                if (dialogResult == true && druckerEinrichtungsFenster.EinstellungenGespeichert)
+                {
+                    // Erfolgs-Meldung anzeigen
+                    MessageBox.Show(
+                        $"Drucker '{druckerEinrichtungsFenster.AusgewaehlterDrucker}' wurde erfolgreich als Etikettendrucker eingerichtet.",
+                        "Drucker erfolgreich eingerichtet",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    System.Diagnostics.Debug.WriteLine($"✅ Drucker eingerichtet: {druckerEinrichtungsFenster.AusgewaehlterDrucker}");
+                }
+                else if (dialogResult == false)
+                {
+                    // Nutzer hat abgebrochen
+                    System.Diagnostics.Debug.WriteLine("ℹ️ Drucker-Einrichtung abgebrochen");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen des Drucker-Einrichtungs-Fensters: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler bei Drucker-Einrichtung: {ex.Message}");
+            }
         }
     }
 }

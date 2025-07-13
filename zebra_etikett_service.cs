@@ -11,8 +11,8 @@ namespace LAGA
 {
     /// <summary>
     /// Service für die Generierung und den Druck von Etiketten
-    /// Unterstützt Zebra ZPL-Drucker und Standard-Windows-Drucker automatisch
-    /// Erweitert um automatische Drucker-Erkennung für Multi-Standort-Nutzung
+    /// Verwendet den vom Nutzer ausgewählten Drucker (flexibel für Zebra, TSC und andere ZPL-kompatible Drucker)
+    /// Unterstützt sowohl direkte ZPL-Übertragung als auch Standard-Windows-Druck
     /// </summary>
     public static class ZebraEtikettService
     {
@@ -23,27 +23,43 @@ namespace LAGA
             AppDomain.CurrentDomain.BaseDirectory, "ZPL_Etiketten");
 
         /// <summary>
-        /// Standard-Druckername für Zebra GX420t (wird automatisch gesucht)
+        /// Standard-Port für Netzwerkdruck (falls verwendet)
         /// </summary>
-        private static string _zebraDruckerName = "ZDesigner GX420t";
+        private static int _netzwerkPort = 9100;
 
         /// <summary>
-        /// IP-Adresse des Zebra-Druckers (falls Netzwerkdruck verwendet wird)
+        /// Enum für verfügbare Druck-Methoden
         /// </summary>
-        private static string _zebraDruckerIP = "192.168.1.100"; // Beispiel-IP, muss angepasst werden
-
-        /// <summary>
-        /// Port für Netzwerkdruck (Standard für Zebra-Drucker)
-        /// </summary>
-        private static int _zebraDruckerPort = 9100;
-
-        /// <summary>
-        /// Enum für verfügbare Drucker-Typen
-        /// </summary>
-        public enum DruckerTyp
+        public enum DruckMethode
         {
-            Zebra,
-            StandardWindows
+            WindowsDrucker,      // Standard Windows-Drucker (ZPL als RAW-Daten)
+            Netzwerk,           // Direkter Netzwerkdruck über TCP
+            StandardGrafik      // Fallback: Grafik-Druck für nicht-ZPL-Drucker
+        }
+
+        /// <summary>
+        /// Druckt bestehende Barcodes erneut (für Neudruck-Funktionalität)
+        /// Verwendet den vom Nutzer konfigurierten Drucker
+        /// </summary>
+        /// <param name="ausgewaehlteEinheiten">Liste der ArtikelEinheiten die neu gedruckt werden sollen</param>
+        /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
+        /// <returns>True wenn erfolgreich gedruckt, false bei Fehlern</returns>
+        public static async Task<bool> DruckeBestehendeBarcodes(
+            List<ArtikelEinheit> ausgewaehlteEinheiten, Artikel artikel)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"🔄 Neudruck von {ausgewaehlteEinheiten.Count} bestehenden Barcode(s)");
+
+                // Für Neudruck die gleiche Logik wie für neuen Druck verwenden
+                // Das stellt sicher dass der konfigurierte Drucker verwendet wird
+                return await ErstelleUndDruckeEtikettenAsync(ausgewaehlteEinheiten, artikel);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Neudruck der Barcodes: {ex.Message}");
+                throw new Exception($"Fehler beim Neudruck der Barcodes: {ex.Message}", ex);
+            }
         }
 
         /// <summary>
@@ -51,121 +67,54 @@ namespace LAGA
         /// </summary>
         static ZebraEtikettService()
         {
-            // ZPL-Verzeichnis erstellen falls es nicht existiert
             Directory.CreateDirectory(EtikettenVerzeichnis);
         }
 
         /// <summary>
-        /// Erstellt und druckt Etiketten für eine Liste von ArtikelEinheiten (Wareneingang)
-        /// Automatische Drucker-Erkennung: Zebra bevorzugt, Standard-Drucker als Fallback
+        /// Erstellt und druckt Etiketten für eine Liste von ArtikelEinheiten
+        /// Verwendet den vom Nutzer in den Einstellungen konfigurierten Drucker
         /// </summary>
         /// <param name="artikelEinheiten">Liste der ArtikelEinheiten für die Etiketten erstellt werden sollen</param>
         /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
+        /// <returns>True wenn erfolgreich gedruckt, false bei Fehlern</returns>
         public static async Task<bool> ErstelleUndDruckeEtikettenAsync(
             List<ArtikelEinheit> artikelEinheiten, Artikel artikel)
         {
             try
             {
-                // Verfügbaren Drucker-Typ ermitteln
-                DruckerTyp verfuegbarerDrucker = ErmittleVerfuegbarenDrucker();
+                // Zuerst prüfen ob ein Drucker konfiguriert ist
+                var druckerEinstellungen = await DruckerEinstellungsService.EinstellungenLadenAsync();
 
-                System.Diagnostics.Debug.WriteLine($"🖨️ Erkannter Drucker-Typ: {verfuegbarerDrucker}");
-
-                bool druckErfolgreich = false;
-
-                // Je nach Drucker-Typ entsprechend drucken
-                switch (verfuegbarerDrucker)
+                if (druckerEinstellungen == null || string.IsNullOrEmpty(druckerEinstellungen.AusgewaehlterDrucker))
                 {
-                    case DruckerTyp.Zebra:
-                        druckErfolgreich = await DruckeZebraEtikettenAsync(artikelEinheiten, artikel);
-                        break;
-
-                    case DruckerTyp.StandardWindows:
-                        druckErfolgreich = await DruckeStandardEtikettenAsync(artikelEinheiten, artikel);
-                        break;
+                    MessageBox.Show(
+                        "Es wurde noch kein Drucker für den Etikettendruck konfiguriert.\n\n" +
+                        "Bitte gehen Sie zu 'Einstellungen → Drucker einrichten' und wählen Sie einen Drucker aus.",
+                        "Kein Drucker konfiguriert",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return false;
                 }
 
-                return druckErfolgreich;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Fehler beim Erstellen der Etiketten: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Druckt bestehende Barcodes erneut (für Neudruck-Funktionalität)
-        /// Automatische Drucker-Erkennung für Neudruck
-        /// </summary>
-        /// <param name="ausgewaehlteEinheiten">Liste der ArtikelEinheiten die neu gedruckt werden sollen</param>
-        /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
-        public static async Task<bool> DruckeBestehendeBarcodes(
-            List<ArtikelEinheit> ausgewaehlteEinheiten, Artikel artikel)
-        {
-            try
-            {
-                // Für Neudruck gleiche Logik wie für neuen Druck verwenden
-                return await ErstelleUndDruckeEtikettenAsync(ausgewaehlteEinheiten, artikel);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Fehler beim Neudruck der Barcodes: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Ermittelt automatisch welcher Drucker-Typ verfügbar ist
-        /// Priorisierung: 1. Zebra-Drucker, 2. Standard-Windows-Drucker
-        /// </summary>
-        /// <returns>Verfügbarer Drucker-Typ</returns>
-        private static DruckerTyp ErmittleVerfuegbarenDrucker()
-        {
-            try
-            {
-                // Alle installierten Drucker durchsuchen
-                var druckerListe = PrinterSettings.InstalledPrinters;
-
-                foreach (string drucker in druckerListe)
+                // Prüfen ob der konfigurierte Drucker noch verfügbar ist
+                if (!DruckerEinstellungsService.IstDruckerVerfuegbar(druckerEinstellungen.AusgewaehlterDrucker))
                 {
-                    string druckerLower = drucker.ToLower();
-
-                    // Zebra-Drucker suchen (verschiedene Modelle)
-                    if (druckerLower.Contains("zebra") ||
-                        druckerLower.Contains("gx420") ||
-                        druckerLower.Contains("zdesigner") ||
-                        druckerLower.Contains("zpl"))
-                    {
-                        _zebraDruckerName = drucker; // Exakten Namen speichern
-                        System.Diagnostics.Debug.WriteLine($"✅ Zebra-Drucker gefunden: {drucker}");
-                        return DruckerTyp.Zebra;
-                    }
+                    MessageBox.Show(
+                        $"Der konfigurierte Drucker '{druckerEinstellungen.AusgewaehlterDrucker}' ist nicht mehr verfügbar.\n\n" +
+                        "Bitte gehen Sie zu 'Einstellungen → Drucker einrichten' und wählen Sie einen anderen Drucker aus.",
+                        "Drucker nicht verfügbar",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return false;
                 }
 
-                // Kein Zebra gefunden → Standard-Drucker verwenden
-                System.Diagnostics.Debug.WriteLine($"ℹ️ Kein Zebra-Drucker gefunden, verwende Standard-Drucker");
-                return DruckerTyp.StandardWindows;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"⚠️ Fehler bei Drucker-Erkennung: {ex.Message}");
-                return DruckerTyp.StandardWindows; // Fallback auf Standard
-            }
-        }
+                System.Diagnostics.Debug.WriteLine($"🖨️ Verwende konfigurierten Drucker: {druckerEinstellungen.AusgewaehlterDrucker}");
 
-        /// <summary>
-        /// Druckt Etiketten über Zebra-Drucker (ZPL-Format)
-        /// Bisherige Zebra-Funktionalität unverändert
-        /// </summary>
-        private static async Task<bool> DruckeZebraEtikettenAsync(
-            List<ArtikelEinheit> artikelEinheiten, Artikel artikel)
-        {
-            try
-            {
+                // ZPL-Etiketten für alle ArtikelEinheiten erstellen
                 var erfolgreicheEtiketten = new List<string>();
 
                 foreach (var einheit in artikelEinheiten)
                 {
-                    // ZPL-Etikett für jede Einheit erstellen
                     string zplCode = ErstelleZPLEtikett(einheit, artikel);
 
                     if (!string.IsNullOrEmpty(zplCode))
@@ -176,318 +125,90 @@ namespace LAGA
                     }
                 }
 
-                // Alle erstellten Etiketten drucken
-                if (erfolgreicheEtiketten.Count > 0)
+                if (erfolgreicheEtiketten.Count == 0)
                 {
-                    await DruckeZPLEtikettenAsync(erfolgreicheEtiketten);
-                    return true;
+                    MessageBox.Show("Keine Etiketten konnten erstellt werden.", "Fehler",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return false;
                 }
 
-                return false;
+                // Etiketten an den konfigurierten Drucker senden
+                return await DruckeEtikettenAsync(erfolgreicheEtiketten, druckerEinstellungen.AusgewaehlterDrucker);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"❌ Zebra-Druck Fehler: {ex.Message}");
+                MessageBox.Show($"Fehler beim Erstellen und Drucken der Etiketten:\n\n{ex.Message}",
+                    "Druckfehler", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                System.Diagnostics.Debug.WriteLine($"❌ Druck-Fehler: {ex.Message}");
                 return false;
             }
         }
 
         /// <summary>
-        /// Druckt Etiketten über Standard-Windows-Drucker (Grafik-Format)
-        /// NEU: Für Nicht-Zebra-Drucker (Brother, Canon, HP, etc.)
+        /// Druckt die ZPL-Etiketten über den angegebenen Drucker
+        /// Versucht verschiedene Druck-Methoden automatisch
         /// </summary>
-        private static async Task<bool> DruckeStandardEtikettenAsync(
-            List<ArtikelEinheit> artikelEinheiten, Artikel artikel)
+        /// <param name="zplEtiketten">Liste der ZPL-Codes zum Drucken</param>
+        /// <param name="druckerName">Name des zu verwendenden Druckers</param>
+        /// <returns>True wenn erfolgreich gedruckt</returns>
+        private static async Task<bool> DruckeEtikettenAsync(List<string> zplEtiketten, string druckerName)
+        {
+            try
+            {
+                // Alle ZPL-Codes zu einem Druckauftrag kombinieren
+                string kombiniertesZPL = string.Join("\n", zplEtiketten);
+
+                // Über Windows-Drucker drucken (Standard-Methode)
+                bool erfolg = await DruckeUeberWindowsDruckerAsync(kombiniertesZPL, druckerName);
+
+                if (erfolg)
+                {
+                    System.Diagnostics.Debug.WriteLine($"✅ {zplEtiketten.Count} Etikett(en) erfolgreich gedruckt");
+                    return true;
+                }
+                else
+                {
+                    MessageBox.Show(
+                        $"Fehler beim Drucken über Drucker '{druckerName}'.\n\n" +
+                        "Mögliche Ursachen:\n" +
+                        "• Drucker ist offline oder nicht bereit\n" +
+                        "• Drucker unterstützt keine ZPL-Befehle\n" +
+                        "• Verbindungsfehler zum Drucker",
+                        "Druckfehler",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Drucken: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Druckt ZPL-Code über den Windows-Drucker (für alle ZPL-kompatiblen Drucker)
+        /// Funktioniert mit Zebra, TSC und anderen ZPL-kompatiblen Druckern
+        /// </summary>
+        /// <param name="zplCode">Der zu druckende ZPL-Code</param>
+        /// <param name="druckerName">Name des Druckers</param>
+        /// <returns>True wenn erfolgreich gedruckt</returns>
+        private static async Task<bool> DruckeUeberWindowsDruckerAsync(string zplCode, string druckerName)
         {
             try
             {
                 return await Task.Run(() =>
                 {
-                    bool alleErfolgreich = true;
-
-                    foreach (var einheit in artikelEinheiten)
-                    {
-                        try
-                        {
-                            // Etikett als Grafik erstellen und drucken
-                            bool einzelErfolg = DruckeStandardEtikett(einheit, artikel);
-                            if (!einzelErfolg)
-                            {
-                                alleErfolgreich = false;
-                            }
-
-                            // Kurze Pause zwischen Etiketten
-                            System.Threading.Thread.Sleep(200);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"❌ Standard-Druck Fehler für {einheit.Barcode}: {ex.Message}");
-                            alleErfolgreich = false;
-                        }
-                    }
-
-                    return alleErfolgreich;
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ Standard-Druck Fehler: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Druckt ein einzelnes Etikett über Standard-Windows-Drucker
-        /// Erstellt eine Grafik und sendet sie an den Drucker
-        /// </summary>
-        private static bool DruckeStandardEtikett(ArtikelEinheit einheit, Artikel artikel)
-        {
-            try
-            {
-                // PrintDocument für Standard-Druck erstellen
-                using (var printDocument = new PrintDocument())
-                {
-                    // Standard-Drucker verwenden
-                    // printDocument.PrinterSettings.PrinterName bleibt leer = Standard-Drucker
-
-                    // Etikett-Größe konfigurieren (57x24mm)
-                    printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-
-                    // Paper size für Etikett (57x24mm in Hundertstel Zoll)
-                    var paperSize = new PaperSize("Etikett 57x24mm", 224, 94); // 57mm = 224/100 inch, 24mm = 94/100 inch
-                    printDocument.DefaultPageSettings.PaperSize = paperSize;
-
-                    // Print-Event Handler
-                    printDocument.PrintPage += (sender, e) =>
-                    {
-                        // Null-Check für Graphics-Objekt
-                        if (e.Graphics != null)
-                        {
-                            DruckeEtikettGrafik(e.Graphics, einheit, artikel);
-                        }
-                    };
-
-                    // Drucken
-                    printDocument.Print();
-
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Standard-Etikett-Druck: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Zeichnet das Etikett als Grafik für Standard-Drucker
-        /// Layout: Artikelbezeichnung oben, Barcode unten
-        /// </summary>
-        private static void DruckeEtikettGrafik(Graphics graphics, ArtikelEinheit einheit, Artikel artikel)
-        {
-            try
-            {
-                // Etikett-Abmessungen (57x24mm in Pixel bei 203 DPI)
-                int etikettBreite = 456; // 57mm * 8 Pixel/mm
-                int etikettHoehe = 192;  // 24mm * 8 Pixel/mm
-
-                // Hintergrund weiß
-                graphics.Clear(Color.White);
-
-                // Artikelbezeichnung kürzen für bessere Darstellung
-                string kurzeBezeichnung = artikel.Bezeichnung.Length > 30
-                    ? artikel.Bezeichnung.Substring(0, 27) + "..."
-                    : artikel.Bezeichnung;
-
-                // Font für Bezeichnung - explizit System.Drawing.FontStyle verwenden
-                using (var fontBezeichnung = new Font(new FontFamily("Arial"), 8, System.Drawing.FontStyle.Bold))
-                {
-                    using (var textBrush = new SolidBrush(Color.Black))
-                    {
-                        var textFormat = new StringFormat()
-                        {
-                            Alignment = StringAlignment.Center,
-                            LineAlignment = StringAlignment.Center
-                        };
-
-                        // Bezeichnung oben zentriert
-                        var textBereich = new RectangleF(0, 5, etikettBreite, 40);
-                        graphics.DrawString(kurzeBezeichnung, fontBezeichnung, textBrush, textBereich, textFormat);
-                    }
-                }
-
-                // Barcode als Text (für einfache Implementierung)
-                // In einer erweiterten Version könnte hier ein echter Barcode gezeichnet werden
-                using (var fontBarcode = new Font(new FontFamily("Consolas"), 12, System.Drawing.FontStyle.Bold))
-                {
-                    using (var barcodeBrush = new SolidBrush(Color.Black))
-                    {
-                        var barcodeFormat = new StringFormat()
-                        {
-                            Alignment = StringAlignment.Center,
-                            LineAlignment = StringAlignment.Center
-                        };
-
-                        // Barcode-Bereich
-                        var barcodeBereich = new RectangleF(0, 50, etikettBreite, 80);
-
-                        // Barcode-Striche simulieren (vereinfacht)
-                        using (var strichFont = new Font(new FontFamily("Arial"), 6))
-                        {
-                            var strichText = "||||| " + einheit.Barcode + " |||||";
-                            graphics.DrawString(strichText, strichFont, barcodeBrush, barcodeBereich, barcodeFormat);
-                        }
-
-                        // Barcode-Nummer unter den Strichen
-                        var nummernBereich = new RectangleF(0, 130, etikettBreite, 30);
-                        graphics.DrawString(einheit.Barcode, fontBarcode, barcodeBrush, nummernBereich, barcodeFormat);
-                    }
-                }
-
-                // Rahmen um das Etikett (optional, für bessere Sichtbarkeit)
-                using (var rahmenPen = new Pen(Color.Black, 1))
-                {
-                    graphics.DrawRectangle(rahmenPen, 0, 0, etikettBreite - 1, etikettHoehe - 1);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Zeichnen der Etikett-Grafik: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Erstellt den ZPL-Code für ein einzelnes Etikett (für Zebra-Drucker)
-        /// Unverändert von der ursprünglichen Implementierung
-        /// </summary>
-        private static string ErstelleZPLEtikett(ArtikelEinheit einheit, Artikel artikel)
-        {
-            try
-            {
-                // Artikelbezeichnung kürzen (max. 40 Zeichen für bessere Lesbarkeit)
-                string kurzeBezeichnung = artikel.Bezeichnung.Length > 40
-                    ? artikel.Bezeichnung.Substring(0, 15) + "..."
-                    : artikel.Bezeichnung;
-
-                var zpl = new StringBuilder();
-
-                // Etikett-Start
-                zpl.AppendLine("^XA");
-
-                // Etikettgröße: 57mm x 24mm → 456 x 192 dots (bei 203 DPI)
-                zpl.AppendLine("^PW456"); // Breite
-                zpl.AppendLine("^LL192"); // Länge
-
-                // Druckgeschwindigkeit & Dunkelheit
-                zpl.AppendLine("^PR4");
-                zpl.AppendLine("^MD15");
-
-                // Zeichensatz UTF-8 (optional, für Sonderzeichen)
-                zpl.AppendLine("^CI28");
-
-                // Artikelbezeichnung oben, zentriert
-                zpl.AppendLine("^FO0,35^FB456,1,0,C^A0N,20,20^FH^FD" + kurzeBezeichnung + "^FS");
-
-                // Barcode manuell zentriert
-                zpl.AppendLine("^BY2,2,80");
-                zpl.AppendLine("^FO85,60^BCN,80,Y,N,N^FD" + einheit.Barcode + "^FS");
-
-                // Etikett-Ende
-                zpl.AppendLine("^XZ");
-
-                return zpl.ToString();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"Fehler beim Erstellen des ZPL-Codes für Barcode {einheit.Barcode}: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Speichert den ZPL-Code als Datei (für Debug/Backup)
-        /// </summary>
-        private static async Task SpeichereZPLDateiAsync(ArtikelEinheit einheit, string zplCode, string prefix = "")
-        {
-            try
-            {
-                string dateiname = string.IsNullOrEmpty(prefix)
-                    ? $"{einheit.ArtikelId}_{einheit.Barcode}.zpl"
-                    : $"{prefix}_{einheit.ArtikelId}_{einheit.Barcode}_{DateTime.Now:yyyyMMdd_HHmmss}.zpl";
-
-                string vollstaendigerPfad = Path.Combine(EtikettenVerzeichnis, dateiname);
-
-                await File.WriteAllTextAsync(vollstaendigerPfad, zplCode, Encoding.UTF8);
-            }
-            catch (Exception ex)
-            {
-                // Fehler beim Speichern nicht als kritisch behandeln
-                System.Diagnostics.Debug.WriteLine($"Warnung: ZPL-Datei konnte nicht gespeichert werden: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Druckt die ZPL-Etiketten über verschiedene Methoden (für Zebra-Drucker)
-        /// Unverändert von der ursprünglichen Implementierung
-        /// </summary>
-        private static async Task DruckeZPLEtikettenAsync(List<string> zplCodes)
-        {
-            bool druckErfolgreich = false;
-
-            foreach (string zplCode in zplCodes)
-            {
-                try
-                {
-                    // Methode 1: Direkter USB/Serieller Druck über Windows-Drucker
-                    if (await DruckeUeberWindowsDrucker(zplCode))
-                    {
-                        druckErfolgreich = true;
-                        continue;
-                    }
-
-                    // Methode 2: Netzwerk-Druck (falls IP konfiguriert)
-                    if (!string.IsNullOrEmpty(_zebraDruckerIP))
-                    {
-                        if (await DruckeUeberNetzwerk(zplCode))
-                        {
-                            druckErfolgreich = true;
-                            continue;
-                        }
-                    }
-
-                    // Pause zwischen den Druckaufträgen
-                    await Task.Delay(200);
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Fehler beim Drucken eines Etiketts: {ex.Message}");
-                }
-            }
-
-            if (!druckErfolgreich)
-            {
-                throw new Exception("Keine der Druck-Methoden war erfolgreich. Bitte prüfen Sie die Drucker-Konfiguration.");
-            }
-        }
-
-        /// <summary>
-        /// Druckt ZPL über den Windows-Drucker (USB/Seriell) - für Zebra-Drucker
-        /// Unverändert von der ursprünglichen Implementierung
-        /// </summary>
-        private static async Task<bool> DruckeUeberWindowsDrucker(string zplCode)
-        {
-            try
-            {
-                return await Task.Run(() =>
-                {
-                    // P/Invoke für direkten Drucker-Zugriff
                     IntPtr hPrinter = IntPtr.Zero;
 
                     try
                     {
                         // Drucker öffnen
-                        if (!OpenPrinter(_zebraDruckerName, out hPrinter, IntPtr.Zero))
+                        if (!OpenPrinter(druckerName, out hPrinter, IntPtr.Zero))
                         {
+                            System.Diagnostics.Debug.WriteLine($"❌ Konnte Drucker '{druckerName}' nicht öffnen");
                             return false;
                         }
 
@@ -496,124 +217,138 @@ namespace LAGA
                         {
                             pDocName = "LAGA Etikett",
                             pOutputFile = null,
-                            pDataType = "RAW"
+                            pDataType = "RAW"  // Wichtig: RAW-Modus für ZPL-Befehle
                         };
 
                         if (StartDocPrinter(hPrinter, 1, ref docInfo) == 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine("❌ Konnte Druckauftrag nicht starten");
                             return false;
+                        }
 
                         if (!StartPagePrinter(hPrinter))
+                        {
+                            System.Diagnostics.Debug.WriteLine("❌ Konnte Druckseite nicht starten");
+                            EndDocPrinter(hPrinter);
                             return false;
+                        }
 
-                        // ZPL-Daten senden
+                        // ZPL-Daten als UTF-8 Bytes konvertieren und senden
                         byte[] zplBytes = Encoding.UTF8.GetBytes(zplCode);
                         uint bytesWritten = 0;
 
                         bool success = WritePrinter(hPrinter, zplBytes, (uint)zplBytes.Length, out bytesWritten);
 
-                        // Druckauftrag beenden
+                        // Druckauftrag ordnungsgemäß beenden
                         EndPagePrinter(hPrinter);
                         EndDocPrinter(hPrinter);
 
-                        return success && bytesWritten == zplBytes.Length;
+                        if (success && bytesWritten == zplBytes.Length)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"✅ ZPL erfolgreich an Drucker '{druckerName}' gesendet ({bytesWritten} Bytes)");
+                            return true;
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"❌ ZPL-Übertragung fehlgeschlagen. Erwartet: {zplBytes.Length}, Geschrieben: {bytesWritten}");
+                            return false;
+                        }
                     }
                     finally
                     {
+                        // Drucker-Handle schließen
                         if (hPrinter != IntPtr.Zero)
+                        {
                             ClosePrinter(hPrinter);
+                        }
                     }
                 });
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Windows-Drucker Fehler: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Windows-Druck: {ex.Message}");
                 return false;
             }
         }
 
         /// <summary>
-        /// Druckt ZPL über Netzwerk (TCP/IP) - für Zebra-Drucker
-        /// Unverändert von der ursprünglichen Implementierung
+        /// Erstellt den ZPL-Code für ein einzelnes Etikett
+        /// ORIGINAL FUNKTIONIERENDER CODE - exakt wie im GitHub Repository
         /// </summary>
-        private static async Task<bool> DruckeUeberNetzwerk(string zplCode)
+        /// <param name="einheit">Die ArtikelEinheit für die das Etikett erstellt wird</param>
+        /// <param name="artikel">Der zugehörige Artikel</param>
+        /// <returns>Fertiger ZPL-Code für das Etikett</returns>
+        private static string ErstelleZPLEtikett(ArtikelEinheit einheit, Artikel artikel)
         {
             try
             {
-                using (var tcpClient = new TcpClient())
-                {
-                    // Verbindung zum Drucker
-                    await tcpClient.ConnectAsync(_zebraDruckerIP, _zebraDruckerPort);
+                // Artikelbezeichnung kürzen (max. 40 Zeichen für bessere Lesbarkeit)
+                
+                string kurzeBezeichnung = artikel.Bezeichnung.Length > 40
+                    ? artikel.Bezeichnung.Substring(0, 15) + "..."
+                    : artikel.Bezeichnung;
 
-                    using (var stream = tcpClient.GetStream())
-                    {
-                        byte[] zplBytes = Encoding.UTF8.GetBytes(zplCode);
-                        await stream.WriteAsync(zplBytes, 0, zplBytes.Length);
-                        await stream.FlushAsync();
-                    }
-                }
-                return true;
+                var zpl = new StringBuilder();
+
+                // ZPL-Einstellungen 
+                zpl.AppendLine("^XA");                          // Etikett-Start
+
+                // Etikettgröße: 57mm x 24mm → 456 x 192 dots (bei 203 DPI)
+                zpl.AppendLine("^PW456");                       
+                zpl.AppendLine("^LL192");                       
+
+                // Druckgeschwindigkeit & Dunkelheit
+                zpl.AppendLine("^PR4");                         // Druckgeschwindigkeit
+                zpl.AppendLine("^MD15");                        // Druckdunkelheit
+
+                // Zeichensatz UTF-8 (für Sonderzeichen)
+                zpl.AppendLine("^CI28");
+
+                // Artikelbezeichnung oben, zentriert mit FB-Parameter
+                zpl.AppendLine("^FO0,35^FB456,1,0,C^A0N,20,20^FH^FD" + kurzeBezeichnung + "^FS");
+
+                // Barcode mit BY-Einstellungen und genauer Positionierung
+                zpl.AppendLine("^BY2,2,80");                    // Barcode-Parameter
+                zpl.AppendLine("^FO85,60^BCN,80,Y,N,N^FD" + einheit.Barcode + "^FS");
+
+                zpl.AppendLine("^XZ");                          // Etikett-Ende
+
+                return zpl.ToString();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Netzwerk-Druck Fehler: {ex.Message}");
-                return false;
+                System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Erstellen des ZPL-Etiketts: {ex.Message}");
+                throw new Exception($"Fehler beim Erstellen des ZPL-Codes für Barcode {einheit.Barcode}: {ex.Message}", ex);
             }
         }
 
         /// <summary>
-        /// Gibt den Pfad zum ZPL-Verzeichnis zurück
+        /// Speichert den ZPL-Code als Datei (für Backup und Debugging)
         /// </summary>
-        public static string GetEtikettenVerzeichnis()
-        {
-            return EtikettenVerzeichnis;
-        }
-
-        /// <summary>
-        /// Konfiguriert den Zebra-Drucker Namen
-        /// </summary>
-        public static void SetZebraDruckerName(string druckerName)
-        {
-            _zebraDruckerName = druckerName;
-        }
-
-        /// <summary>
-        /// Konfiguriert die Zebra-Drucker IP für Netzwerk-Druck
-        /// </summary>
-        public static void SetZebraDruckerIP(string ipAdresse, int port = 9100)
-        {
-            _zebraDruckerIP = ipAdresse;
-            _zebraDruckerPort = port;
-        }
-
-        /// <summary>
-        /// Löscht alte ZPL-Dateien (älter als 30 Tage)
-        /// </summary>
-        public static void BereinigeAlteEtiketten()
+        /// <param name="einheit">Die ArtikelEinheit</param>
+        /// <param name="zplCode">Der ZPL-Code</param>
+        private static async Task SpeichereZPLDateiAsync(ArtikelEinheit einheit, string zplCode)
         {
             try
             {
-                var cutoffDate = DateTime.Now.AddDays(-30);
-                var dateien = Directory.GetFiles(EtikettenVerzeichnis, "*.zpl");
+                string dateiName = $"Etikett_{einheit.Barcode}_{DateTime.Now:yyyyMMdd_HHmmss}.zpl";
+                string dateiPfad = Path.Combine(EtikettenVerzeichnis, dateiName);
 
-                foreach (string datei in dateien)
-                {
-                    var fileInfo = new FileInfo(datei);
-                    if (fileInfo.CreationTime < cutoffDate)
-                    {
-                        File.Delete(datei);
-                    }
-                }
+                await File.WriteAllTextAsync(dateiPfad, zplCode);
+
+                System.Diagnostics.Debug.WriteLine($"💾 ZPL-Datei gespeichert: {dateiName}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Fehler beim Bereinigen ignorieren - nicht kritisch
+                System.Diagnostics.Debug.WriteLine($"⚠️ Fehler beim Speichern der ZPL-Datei: {ex.Message}");
+                // Fehler beim Speichern ist nicht kritisch für den Druckvorgang
             }
         }
 
         /// <summary>
-        /// Erstellt ein Test-Etikett für Drucker-Konfiguration
-        /// Funktioniert mit beiden Drucker-Typen
+        /// Erstellt ein Test-Etikett für Drucker-Tests
         /// </summary>
+        /// <returns>True wenn Test erfolgreich</returns>
         public static async Task<bool> DruckeTestEtikettAsync()
         {
             try
@@ -621,13 +356,13 @@ namespace LAGA
                 var testEinheit = new ArtikelEinheit
                 {
                     ArtikelId = 999,
-                    Barcode = "1234567890",
+                    Barcode = "TEST123456",
                     ErstellungsDatum = DateTime.Now
                 };
 
                 var testArtikel = new Artikel
                 {
-                    Bezeichnung = "TEST-ARTIKEL"
+                    Bezeichnung = "TEST-ARTIKEL für Drucker-Konfiguration"
                 };
 
                 var testEinheiten = new List<ArtikelEinheit> { testEinheit };
@@ -643,42 +378,89 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Gibt Informationen über den erkannten Drucker zurück
-        /// NEU: Für Debugging und Status-Anzeige
+        /// Gibt Informationen über die aktuelle Drucker-Konfiguration zurück
         /// </summary>
-        public static string GetDruckerInfo()
+        /// <returns>String mit Drucker-Informationen</returns>
+        public static async Task<string> GetDruckerInfoAsync()
         {
-            DruckerTyp drucker = ErmittleVerfuegbarenDrucker();
-
             var sb = new StringBuilder();
             sb.AppendLine("LAGA Etikett-Drucker Informationen:");
-            sb.AppendLine($"Erkannter Drucker-Typ: {drucker}");
+            sb.AppendLine();
 
-            if (drucker == DruckerTyp.Zebra)
+            try
             {
-                sb.AppendLine($"Zebra-Drucker: {_zebraDruckerName}");
-                sb.AppendLine("Format: ZPL (57×24mm)");
-                sb.AppendLine("Druck-Methoden: USB/Seriell + Netzwerk");
+                var einstellungen = await DruckerEinstellungsService.EinstellungenLadenAsync();
+
+                if (einstellungen != null && !string.IsNullOrEmpty(einstellungen.AusgewaehlterDrucker))
+                {
+                    sb.AppendLine($"Konfigurierter Drucker: {einstellungen.AusgewaehlterDrucker}");
+                    sb.AppendLine($"Letzte Änderung: {einstellungen.LetzteAenderung:dd.MM.yyyy HH:mm}");
+
+                    bool verfuegbar = DruckerEinstellungsService.IstDruckerVerfuegbar(einstellungen.AusgewaehlterDrucker);
+                    sb.AppendLine($"Status: {(verfuegbar ? "✅ Verfügbar" : "❌ Nicht verfügbar")}");
+                }
+                else
+                {
+                    sb.AppendLine("❌ Kein Drucker konfiguriert");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                sb.AppendLine("Standard-Windows-Drucker wird verwendet");
-                sb.AppendLine("Format: Grafik (57×24mm)");
-                sb.AppendLine("Druck-Methode: Windows-Druckertreiber");
+                sb.AppendLine($"❌ Fehler beim Laden der Einstellungen: {ex.Message}");
             }
 
             sb.AppendLine();
-            sb.AppendLine("Verfügbare Drucker im System:");
-            foreach (string drucker_name in PrinterSettings.InstalledPrinters)
+            sb.AppendLine("Format: ZPL (57×24mm)");
+            sb.AppendLine("Unterstützte Drucker: Zebra, TSC, und andere ZPL-kompatible Drucker");
+            sb.AppendLine();
+            sb.AppendLine("Alle verfügbaren Drucker im System:");
+
+            var verfuegbareDrucker = DruckerEinstellungsService.VerfuegbareDruckerHolen();
+            foreach (string drucker in verfuegbareDrucker)
             {
-                sb.AppendLine($"- {drucker_name}");
+                sb.AppendLine($"- {drucker}");
             }
 
             return sb.ToString();
         }
 
-        #region P/Invoke für Windows-Drucker-API (unverändert)
+        /// <summary>
+        /// Löscht alte ZPL-Dateien (älter als 30 Tage)
+        /// </summary>
+        public static void BereinigeAlteEtiketten()
+        {
+            try
+            {
+                var cutoffDate = DateTime.Now.AddDays(-30);
+                var dateien = Directory.GetFiles(EtikettenVerzeichnis, "*.zpl");
 
+                int geloeschteAnzahl = 0;
+                foreach (string datei in dateien)
+                {
+                    var fileInfo = new FileInfo(datei);
+                    if (fileInfo.CreationTime < cutoffDate)
+                    {
+                        File.Delete(datei);
+                        geloeschteAnzahl++;
+                    }
+                }
+
+                if (geloeschteAnzahl > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"🗑️ {geloeschteAnzahl} alte ZPL-Dateien bereinigt");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ Fehler beim Bereinigen alter Etiketten: {ex.Message}");
+            }
+        }
+
+        #region P/Invoke für Windows-Drucker-API
+
+        /// <summary>
+        /// Struktur für Dokument-Informationen beim Drucken
+        /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct DOC_INFO_1
         {

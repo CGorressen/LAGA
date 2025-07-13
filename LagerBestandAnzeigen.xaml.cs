@@ -204,6 +204,56 @@ namespace LAGA
             }
         }
 
+        private async void MenuItemManuellesAuslagern_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgLagerbestand.SelectedItem is LagerbestandAnzeigeDto selectedBestand)
+            {
+                try
+                {
+                    // Zuerst prüfen ob Artikel überhaupt Bestand hat
+                    if (selectedBestand.Bestand <= 0)
+                    {
+                        MessageBox.Show("Dieser Artikel hat keinen Bestand zum Auslagern.",
+                            "Kein Bestand vorhanden", MessageBoxButton.OK, MessageBoxImage.Information);
+                        return;
+                    }
+
+                    // Manuelles-Auslagerungs-Fenster als modalen Dialog öffnen
+                    var manuellesAuslagernFenster = new ManuellesAuslagern(selectedBestand.OriginalArtikel);
+                    manuellesAuslagernFenster.Owner = Window.GetWindow(this);
+
+                    // Dialog anzeigen und nach dem Schließen Bestandsmonitor ausführen
+                    var dialogResult = manuellesAuslagernFenster.ShowDialog();
+
+                    // Wenn Artikel ausgelagert wurden, Bestandsmonitor für alle betroffenen Artikel ausführen
+                    if (dialogResult == true && manuellesAuslagernFenster.BetroffeneArtikelIds.Any())
+                    {
+                        // Bestandsmonitor für jeden betroffenen Artikel ausführen
+                        foreach (int artikelId in manuellesAuslagernFenster.BetroffeneArtikelIds)
+                        {
+                            await BestandsMonitor.PruefeBestandNachAenderungAsync(artikelId);
+                        }
+
+                        // Debug-Information
+                        System.Diagnostics.Debug.WriteLine($"Bestandsmonitor ausgeführt für {manuellesAuslagernFenster.BetroffeneArtikelIds.Count} Artikel nach manueller Auslagerung");
+
+                        // Lagerbestand neu laden um aktuelle Bestände anzuzeigen
+                        RefreshLagerbestand();
+
+                        // Optional: Kurze Erfolgsmeldung für Benutzer
+                        MessageBox.Show("Auslagerung abgeschlossen und Bestände aktualisiert.",
+                            "Erfolgreich", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Fehler beim Öffnen des Manuellen-Auslagerungs-Fensters: {ex.Message}",
+                        "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+
         /// <summary>
         /// Schließt die Lagerbestand-Ansicht
         /// </summary>

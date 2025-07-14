@@ -229,9 +229,35 @@ namespace LAGA
                     // ArtikelIds für späteren Zugriff speichern
                     BetroffeneArtikelIds = betroffeneArtikelIds;
 
-                    // Alle ArtikelEinheiten aus der Datenbank löschen
+                    // Daten für das Logging sammeln (BEVOR die Einheiten gelöscht werden)
+                    var auslagerungsDaten = new Dictionary<int, (string bezeichnung, int bestandVorher, List<string> barcodes)>();
+
                     using (var context = new LagerContext())
                     {
+                        // Für jeden betroffenen Artikel die Daten sammeln
+                        foreach (var artikelId in betroffeneArtikelIds)
+                        {
+                            // Artikel-Bezeichnung laden
+                            var artikel = await context.Artikel
+                                .FirstOrDefaultAsync(a => a.Id == artikelId);
+
+                            if (artikel != null)
+                            {
+                                // Aktueller Bestand (vor der Auslagerung)
+                                var bestandVorher = await context.ArtikelEinheiten
+                                    .CountAsync(ae => ae.ArtikelId == artikelId);
+
+                                // Barcodes sammeln die ausgelagert werden sollen
+                                var ausgelagerteBarcodes = _gescannteArtikel
+                                    .Where(ga => ga.OriginalEinheit.ArtikelId == artikelId)
+                                    .Select(ga => ga.Barcode)
+                                    .ToList();
+
+                                auslagerungsDaten[artikelId] = (artikel.Bezeichnung, bestandVorher, ausgelagerteBarcodes);
+                            }
+                        }
+
+                        // Alle ArtikelEinheiten aus der Datenbank löschen
                         var einheitenIds = _gescannteArtikel.Select(a => a.OriginalEinheit.Id).ToList();
 
                         var einheitenZumLoeschen = await context.ArtikelEinheiten
@@ -240,6 +266,25 @@ namespace LAGA
 
                         context.ArtikelEinheiten.RemoveRange(einheitenZumLoeschen);
                         await context.SaveChangesAsync();
+                    }
+
+                    // LAGERBEWEGUNG LOGGEN - Nach dem Löschen für jeden Artikel
+                    foreach (var kvp in auslagerungsDaten)
+                    {
+                        var artikelId = kvp.Key;
+                        var (bezeichnung, bestandVorher, barcodes) = kvp.Value;
+
+                        // Bestand nachher berechnen
+                        var bestandNachher = bestandVorher - barcodes.Count;
+
+                        // Auslagerung loggen
+                        await LagerbewegungsLogger.LoggeAuslagerungAsync(
+                            artikelBezeichnung: bezeichnung,
+                            menge: barcodes.Count,
+                            bestandVorher: bestandVorher,
+                            bestandNachher: bestandNachher,
+                            barcodes: barcodes
+                        );
                     }
 
                     MessageBox.Show($"Erfolgreich {_gescannteArtikel.Count} Artikel ausgelagert!",

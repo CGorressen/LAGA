@@ -110,6 +110,14 @@ namespace LAGA
                 btnEinlagern.Content = "Lagert ein...";
                 ShowStatus($"Lagere {stueckzahl} Einheiten ein...", Brushes.Blue);
 
+                // Bestand vorher ermitteln (für das Logging)
+                int bestandVorher;
+                using (var context = new LagerContext())
+                {
+                    bestandVorher = await context.ArtikelEinheiten
+                        .CountAsync(ae => ae.ArtikelId == _artikel.Id);
+                }
+
                 // Aktuelles Datum und Uhrzeit für alle Einheiten dieses Wareneingangs
                 DateTime erstellungsDatum = DateTime.Now;
 
@@ -137,6 +145,21 @@ namespace LAGA
                     context.ArtikelEinheiten.AddRange(neueEinheiten);
                     await context.SaveChangesAsync();
                 }
+
+                // Bestand nachher berechnen
+                int bestandNachher = bestandVorher + stueckzahl;
+
+                // Barcodes für das Logging sammeln
+                var barcodesListe = neueEinheiten.Select(e => e.Barcode).ToList();
+
+                // LAGERBEWEGUNG LOGGEN - Einlagerung dokumentieren
+                await LagerbewegungsLogger.LoggeEinlagerungAsync(
+                    artikelBezeichnung: _artikel.Bezeichnung,
+                    menge: stueckzahl,
+                    bestandVorher: bestandVorher,
+                    bestandNachher: bestandNachher,
+                    barcodes: barcodesListe
+                );
 
                 ShowStatus($"✓ {stueckzahl} Einheiten erfolgreich eingelagert!", Brushes.Green);
 
@@ -207,6 +230,7 @@ namespace LAGA
             finally
             {
                 // Button wieder aktivieren
+                btnEinlagern.IsEnabled = true;
                 btnEinlagern.Content = "Einlagern";
                 ValidateInput(); // Status neu bewerten
             }

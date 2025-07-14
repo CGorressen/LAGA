@@ -233,8 +233,18 @@ namespace LAGA
                 btnAusgewaehlteDrucken.IsEnabled = false;
                 btnAusgewaehlteDrucken.Content = "Lagert aus...";
 
+                // Daten für das Logging sammeln (BEVOR die Einheiten gelöscht werden)
+                string artikelBezeichnung = _artikel.Bezeichnung;
+                var barcodes = ausgewaehlteEinheiten.Select(e => e.Barcode).ToList();
+                int menge = ausgewaehlteEinheiten.Count;
+
+                // Bestand vorher ermitteln
+                int bestandVorher;
                 using (var context = new LagerContext())
                 {
+                    bestandVorher = await context.ArtikelEinheiten
+                        .CountAsync(ae => ae.ArtikelId == _artikel.Id);
+
                     // Alle ausgewählten ArtikelEinheiten aus der Datenbank entfernen
                     var einheitenIds = ausgewaehlteEinheiten.Select(e => e.Id).ToList();
                     var zuLoeschendeEinheiten = await context.ArtikelEinheiten
@@ -252,6 +262,18 @@ namespace LAGA
 
                     BetroffeneArtikelIds.AddRange(betroffeneArtikelIds);
                 }
+
+                // Bestand nachher berechnen
+                int bestandNachher = bestandVorher - menge;
+
+                // LAGERBEWEGUNG LOGGEN - Auslagerung dokumentieren
+                await LagerbewegungsLogger.LoggeAuslagerungAsync(
+                    artikelBezeichnung: artikelBezeichnung,
+                    menge: menge,
+                    bestandVorher: bestandVorher,
+                    bestandNachher: bestandNachher,
+                    barcodes: barcodes
+                );
 
                 // Erfolgsmeldung
                 MessageBox.Show($"Erfolgreich {ausgewaehlteEinheiten.Count} Artikel ausgelagert!",

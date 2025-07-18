@@ -17,12 +17,6 @@ namespace LAGA
     public static class ZebraEtikettService
     {
         /// <summary>
-        /// Verzeichnis für die ZPL-Dateien (als Backup/Debug)
-        /// </summary>
-        private static readonly string EtikettenVerzeichnis = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "ZPL_Etiketten");
-
-        /// <summary>
         /// Standard-Port für Netzwerkdruck (falls verwendet)
         /// </summary>
         private static int _netzwerkPort = 9100;
@@ -63,16 +57,8 @@ namespace LAGA
         }
 
         /// <summary>
-        /// Statischer Konstruktor - erstellt ZPL-Verzeichnis
-        /// </summary>
-        static ZebraEtikettService()
-        {
-            Directory.CreateDirectory(EtikettenVerzeichnis);
-        }
-
-        /// <summary>
-        /// Erstellt und druckt Etiketten für eine Liste von ArtikelEinheiten
-        /// Verwendet den vom Nutzer in den Einstellungen konfigurierten Drucker
+        /// Erstellt ZPL-Etiketten für die angegebenen ArtikelEinheiten und sendet sie an den konfigurierten Drucker
+        /// Verwendet automatisch den vom Nutzer in den Einstellungen ausgewählten Drucker
         /// </summary>
         /// <param name="artikelEinheiten">Liste der ArtikelEinheiten für die Etiketten erstellt werden sollen</param>
         /// <param name="artikel">Der zugehörige Artikel mit Bezeichnung</param>
@@ -82,26 +68,31 @@ namespace LAGA
         {
             try
             {
-                // Zuerst prüfen ob ein Drucker konfiguriert ist
+                if (artikelEinheiten == null || !artikelEinheiten.Any())
+                {
+                    MessageBox.Show("Keine ArtikelEinheiten zum Drucken vorhanden.", "Fehler",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return false;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"🖨️ Erstelle {artikelEinheiten.Count} Etikett(en) für Artikel: {artikel.Bezeichnung}");
+
+                // Drucker-Einstellungen laden
                 var druckerEinstellungen = await DruckerEinstellungsService.EinstellungenLadenAsync();
 
                 if (druckerEinstellungen == null || string.IsNullOrEmpty(druckerEinstellungen.AusgewaehlterDrucker))
                 {
-                    MessageBox.Show(
-                        "Es wurde noch kein Drucker für den Etikettendruck konfiguriert.\n\n" +
-                        "Bitte gehen Sie zu 'Einstellungen → Drucker einrichten' und wählen Sie einen Drucker aus.",
-                        "Kein Drucker konfiguriert",
+                    MessageBox.Show("Kein Drucker konfiguriert!\n\nBitte gehen Sie zu 'Einstellungen > Drucker-Konfiguration' und wählen Sie einen Drucker aus.",
+                        "Drucker nicht konfiguriert",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return false;
                 }
 
-                // Prüfen ob der konfigurierte Drucker noch verfügbar ist
+                // Prüfen ob der konfigurierte Drucker verfügbar ist
                 if (!DruckerEinstellungsService.IstDruckerVerfuegbar(druckerEinstellungen.AusgewaehlterDrucker))
                 {
-                    MessageBox.Show(
-                        $"Der konfigurierte Drucker '{druckerEinstellungen.AusgewaehlterDrucker}' ist nicht mehr verfügbar.\n\n" +
-                        "Bitte gehen Sie zu 'Einstellungen → Drucker einrichten' und wählen Sie einen anderen Drucker aus.",
+                    MessageBox.Show($"Der konfigurierte Drucker '{druckerEinstellungen.AusgewaehlterDrucker}' ist nicht verfügbar!\n\nBitte prüfen Sie:\n- Ist der Drucker eingeschaltet?\n- Ist der Drucker korrekt installiert?\n- Sind alle Kabel richtig angeschlossen?",
                         "Drucker nicht verfügbar",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -119,8 +110,6 @@ namespace LAGA
 
                     if (!string.IsNullOrEmpty(zplCode))
                     {
-                        // ZPL-Code als Datei speichern (für Debug/Backup)
-                        await SpeichereZPLDateiAsync(einheit, zplCode);
                         erfolgreicheEtiketten.Add(zplCode);
                     }
                 }
@@ -169,32 +158,26 @@ namespace LAGA
                 }
                 else
                 {
-                    MessageBox.Show(
-                        $"Fehler beim Drucken über Drucker '{druckerName}'.\n\n" +
-                        "Mögliche Ursachen:\n" +
-                        "• Drucker ist offline oder nicht bereit\n" +
-                        "• Drucker unterstützt keine ZPL-Befehle\n" +
-                        "• Verbindungsfehler zum Drucker",
-                        "Druckfehler",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    MessageBox.Show($"Fehler beim Drucken über Windows-Drucker '{druckerName}'.\n\nBitte prüfen Sie:\n- Ist der Drucker eingeschaltet und bereit?\n- Sind genügend Etiketten eingelegt?\n- Ist das Druckerkabel angeschlossen?",
+                        "Druckfehler", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return false;
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Drucken: {ex.Message}");
+                MessageBox.Show($"Unerwarteter Fehler beim Drucken:\n\n{ex.Message}",
+                    "Druckfehler", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
         }
 
         /// <summary>
-        /// Druckt ZPL-Code über den Windows-Drucker (für alle ZPL-kompatiblen Drucker)
-        /// Funktioniert mit Zebra, TSC und anderen ZPL-kompatiblen Druckern
+        /// Druckt ZPL-Code über Windows-Drucker (RAW-Modus)
         /// </summary>
-        /// <param name="zplCode">Der zu druckende ZPL-Code</param>
-        /// <param name="druckerName">Name des Druckers</param>
-        /// <returns>True wenn erfolgreich gedruckt</returns>
+        /// <param name="zplCode">Der ZPL-Code zum Drucken</param>
+        /// <param name="druckerName">Name des Windows-Druckers</param>
+        /// <returns>True wenn erfolgreich gesendet</returns>
         private static async Task<bool> DruckeUeberWindowsDruckerAsync(string zplCode, string druckerName)
         {
             try
@@ -212,7 +195,7 @@ namespace LAGA
                             return false;
                         }
 
-                        // Druckauftrag starten
+                        // Druckauftrag konfigurieren und starten
                         DOC_INFO_1 docInfo = new DOC_INFO_1
                         {
                             pDocName = "LAGA Etikett",
@@ -283,7 +266,7 @@ namespace LAGA
             try
             {
                 // Artikelbezeichnung kürzen (max. 40 Zeichen für bessere Lesbarkeit)
-                
+
                 string kurzeBezeichnung = artikel.Bezeichnung.Length > 40
                     ? artikel.Bezeichnung.Substring(0, 15) + "..."
                     : artikel.Bezeichnung;
@@ -294,8 +277,8 @@ namespace LAGA
                 zpl.AppendLine("^XA");                          // Etikett-Start
 
                 // Etikettgröße: 57mm x 24mm → 456 x 192 dots (bei 203 DPI)
-                zpl.AppendLine("^PW456");                       
-                zpl.AppendLine("^LL192");                       
+                zpl.AppendLine("^PW456");
+                zpl.AppendLine("^LL192");
 
                 // Druckgeschwindigkeit & Dunkelheit
                 zpl.AppendLine("^PR4");                         // Druckgeschwindigkeit
@@ -319,29 +302,6 @@ namespace LAGA
             {
                 System.Diagnostics.Debug.WriteLine($"❌ Fehler beim Erstellen des ZPL-Etiketts: {ex.Message}");
                 throw new Exception($"Fehler beim Erstellen des ZPL-Codes für Barcode {einheit.Barcode}: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Speichert den ZPL-Code als Datei (für Backup und Debugging)
-        /// </summary>
-        /// <param name="einheit">Die ArtikelEinheit</param>
-        /// <param name="zplCode">Der ZPL-Code</param>
-        private static async Task SpeichereZPLDateiAsync(ArtikelEinheit einheit, string zplCode)
-        {
-            try
-            {
-                string dateiName = $"Etikett_{einheit.Barcode}_{DateTime.Now:yyyyMMdd_HHmmss}.zpl";
-                string dateiPfad = Path.Combine(EtikettenVerzeichnis, dateiName);
-
-                await File.WriteAllTextAsync(dateiPfad, zplCode);
-
-                System.Diagnostics.Debug.WriteLine($"💾 ZPL-Datei gespeichert: {dateiName}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"⚠️ Fehler beim Speichern der ZPL-Datei: {ex.Message}");
-                // Fehler beim Speichern ist nicht kritisch für den Druckvorgang
             }
         }
 
@@ -424,38 +384,6 @@ namespace LAGA
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Löscht alte ZPL-Dateien (älter als 30 Tage)
-        /// </summary>
-        public static void BereinigeAlteEtiketten()
-        {
-            try
-            {
-                var cutoffDate = DateTime.Now.AddDays(-30);
-                var dateien = Directory.GetFiles(EtikettenVerzeichnis, "*.zpl");
-
-                int geloeschteAnzahl = 0;
-                foreach (string datei in dateien)
-                {
-                    var fileInfo = new FileInfo(datei);
-                    if (fileInfo.CreationTime < cutoffDate)
-                    {
-                        File.Delete(datei);
-                        geloeschteAnzahl++;
-                    }
-                }
-
-                if (geloeschteAnzahl > 0)
-                {
-                    System.Diagnostics.Debug.WriteLine($"🗑️ {geloeschteAnzahl} alte ZPL-Dateien bereinigt");
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"⚠️ Fehler beim Bereinigen alter Etiketten: {ex.Message}");
-            }
-        }
-
         #region P/Invoke für Windows-Drucker-API
 
         /// <summary>
@@ -472,25 +400,52 @@ namespace LAGA
             public string pDataType;
         }
 
-        [DllImport("winspool.drv", CharSet = CharSet.Unicode)]
-        public static extern bool OpenPrinter(string printerName, out IntPtr hPrinter, IntPtr pDefault);
+        /// <summary>
+        /// Windows API: Drucker öffnen
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool OpenPrinter(string szPrinter, out IntPtr hPrinter, IntPtr pd);
 
-        [DllImport("winspool.drv")]
+        /// <summary>
+        /// Windows API: Drucker schließen
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ClosePrinter(IntPtr hPrinter);
 
-        [DllImport("winspool.drv", CharSet = CharSet.Unicode)]
+        /// <summary>
+        /// Windows API: Druckauftrag starten
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern uint StartDocPrinter(IntPtr hPrinter, uint level, ref DOC_INFO_1 pDocInfo);
 
-        [DllImport("winspool.drv")]
+        /// <summary>
+        /// Windows API: Druckauftrag beenden
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool EndDocPrinter(IntPtr hPrinter);
 
-        [DllImport("winspool.drv")]
+        /// <summary>
+        /// Windows API: Druckseite starten
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool StartPagePrinter(IntPtr hPrinter);
 
-        [DllImport("winspool.drv")]
+        /// <summary>
+        /// Windows API: Druckseite beenden
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool EndPagePrinter(IntPtr hPrinter);
 
-        [DllImport("winspool.drv")]
+        /// <summary>
+        /// Windows API: Daten an Drucker schreiben
+        /// </summary>
+        [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool WritePrinter(IntPtr hPrinter, byte[] pBytes, uint dwCount, out uint dwWritten);
 
         #endregion

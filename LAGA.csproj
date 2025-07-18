@@ -10,12 +10,14 @@
 
   <ItemGroup>
 	  <None Remove="Bilder\lagaStart.png" />
+	  <None Remove="Bilder\neueslogo3.png" />
     <None Remove="Bilder\scanner.png" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Google.Apis.Auth" Version="1.70.0" />
     <PackageReference Include="Google.Apis.Gmail.v1" Version="1.69.0.3742" />
+    <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
     <PackageReference Include="MimeKit" Version="4.12.0" />
     <PackageReference Include="QuestPDF" Version="2025.5.1" />
@@ -24,10 +26,11 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<!-- Splash Screen: Zeigt automatisch lagaStart.png beim Programmstart -->
-		<SplashScreen Include="Bilder\lagaStart.png" />
+		
 		<!-- Normale Resource für andere Zwecke -->
-		<Resource Include="Bilder\scanner.png" />
+		
+		<Resource Include="Bilder\scanner.png" />	
+		<Resource Include="Bilder\neueslogo3.png" />
 	</ItemGroup>
 
 

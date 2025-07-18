@@ -1,0 +1,125 @@
+﻿<Window x:Class="LAGA.LoadingSplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LAGA wird geladen..." 
+        Height="400" Width="600"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        Topmost="True">
+
+    <Window.Resources>
+        <!-- Style für den Hauptcontainer -->
+        <Style x:Key="SplashContainerStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="Black" Direction="315" ShadowDepth="5" Opacity="0.3" BlurRadius="10"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Style für das Logo -->
+        <Style x:Key="LogoImageStyle" TargetType="Image">
+            <Setter Property="Width" Value="200"/>
+            <Setter Property="Height" Value="150"/>
+            <Setter Property="Margin" Value="0,30,0,20"/>
+            <Setter Property="Stretch" Value="Uniform"/>
+        </Style>
+
+        <!-- Style für Status-Text -->
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,10"/>
+        </Style>
+
+        <!-- Style für Fortschrittsbalken -->
+        <Style x:Key="ProgressBarStyle" TargetType="ProgressBar">
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Margin" Value="40,10,40,30"/>
+            <Setter Property="Foreground" Value="#4A90E2"/>
+            <Setter Property="Background" Value="#F0F0F0"/>
+            <Setter Property="BorderBrush" Value="#D0D0D0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <!-- Style für Version-Text -->
+        <Style x:Key="VersionTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#888888"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+    </Window.Resources>
+
+    <Border Style="{StaticResource SplashContainerStyle}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- LAGA Logo -->
+            <Image x:Name="imgLogo" 
+                   Grid.Row="0"
+                   Source="Bilder/neueslogo3.png"
+                   Style="{StaticResource LogoImageStyle}"/>
+
+            <!-- Status-Text -->
+            <TextBlock x:Name="txtStatus" 
+                       Grid.Row="1"
+                       Text="LAGA wird initialisiert..."
+                       Style="{StaticResource StatusTextStyle}"/>
+
+            <!-- Fortschrittsbalken -->
+            <ProgressBar x:Name="progressBar" 
+                         Grid.Row="2"
+                         Value="0" 
+                         Maximum="100"
+                         Style="{StaticResource ProgressBarStyle}"/>
+
+            <!-- Fortschritts-Prozent -->
+            <TextBlock x:Name="txtProgress" 
+                       Grid.Row="3"
+                       Text="0%"
+                       FontSize="12"
+                       Foreground="#666666"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,10"/>
+
+            <!-- Version Info -->
+            <TextBlock x:Name="txtVersion" 
+                       Grid.Row="4"
+                       Text="Version 1.0"
+                       Style="{StaticResource VersionTextStyle}"/>
+
+        </Grid>
+    </Border>
+
+    <!-- Fade-In Animation -->
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation 
+                        Storyboard.TargetProperty="Opacity"
+                        From="0" 
+                        To="1" 
+                        Duration="0:0:0.5"/>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+</Window>

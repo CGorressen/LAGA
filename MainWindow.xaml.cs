@@ -6,8 +6,8 @@ namespace LAGA
 {
     /// <summary>
     /// Hauptfenster der LAGA-Anwendung mit dynamisch austauschbarem Content-Bereich
-    /// Jetzt mit portabler Ordnerstruktur und automatischer Initialisierung
-    /// Erweitert um Warnungen-Menü für das Warnsystem
+    /// VEREINFACHT: Initialisierung erfolgt jetzt im LoadingSplashWindow
+    /// Dieses Fenster wird erst angezeigt wenn alles bereit ist
     /// </summary>
     public partial class MainWindow : Window
     {
@@ -15,48 +15,13 @@ namespace LAGA
         {
             InitializeComponent();
 
-            // Portable Ordnerstruktur beim Start initialisieren
-            InitializeApplicationDirectories();
-
-            // Datenbank beim Start initialisieren
-            InitializeDatabaseAsync();
-
             // StartFenster als Standard-Ansicht laden
+            // (Initialisierung ist bereits im LoadingSplashWindow erfolgt)
             LoadStartFenster();
         }
 
         /// <summary>
-        /// Initialisiert die portable Ordnerstruktur der Anwendung
-        /// Erstellt alle benötigten Unterordner falls sie nicht existieren
-        /// </summary>
-        private void InitializeApplicationDirectories()
-        {
-            try
-            {
-                // Erstelle alle benötigten Anwendungsordner
-                PathHelper.EnsureDirectoriesExist();
-
-                // Optional: Debug-Information über die Pfade (kann später entfernt werden)
-                System.Diagnostics.Debug.WriteLine("Anwendungsordner erfolgreich initialisiert:");
-                System.Diagnostics.Debug.WriteLine(PathHelper.GetPathInformation());
-            }
-            catch (Exception ex)
-            {
-                // Kritischer Fehler beim Erstellen der Ordnerstruktur
-                MessageBox.Show(
-                    $"Fehler beim Initialisieren der Anwendungsordner:\n\n{ex.Message}\n\n" +
-                    $"Die Anwendung kann nicht gestartet werden.",
-                    "Kritischer Fehler",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-
-                // Anwendung beenden, da die Ordnerstruktur nicht erstellt werden konnte
-                Application.Current.Shutdown();
-            }
-        }
-
-        /// <summary>
-        /// Lädt das StartFenster und deaktiviert Event-Handler während Menü-Nutzung
+        /// Lädt das StartFenster - Scanner ist sofort verfügbar
         /// </summary>
         private void LoadStartFenster()
         {
@@ -70,155 +35,119 @@ namespace LAGA
         /// </summary>
         public void ClearMainContent()
         {
-            // StartFenster als Standard-Ansicht laden
             LoadStartFenster();
         }
 
-        /// <summary>
-        /// Initialisiert die SQLite-Datenbank asynchron beim Programmstart
-        /// Verwendet jetzt den portablen Datenbankpfad
-        /// </summary>
-        private async void InitializeDatabaseAsync()
-        {
-            try
-            {
-                using (var context = new LagerContext())
-                {
-                    // Erstellt die Datenbank und alle Tabellen falls sie nicht existieren
-                    // Die Datenbank wird jetzt im Datenbank-Unterordner erstellt
-                    await context.Database.EnsureCreatedAsync();
-                }
-
-                // Optional: Debug-Information über den Datenbankpfad
-                System.Diagnostics.Debug.WriteLine($"Datenbank erfolgreich initialisiert: {PathHelper.DatabaseFilePath}");
-            }
-            catch (Exception ex)
-            {
-                // Fehler bei der Datenbankinitialisierung
-                MessageBox.Show(
-                    $"Fehler beim Initialisieren der Datenbank:\n\n{ex.Message}\n\n" +
-                    $"Datenbankpfad: {PathHelper.DatabaseFilePath}",
-                    "Datenbankfehler",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
-        }
+        // ===============================
+        // MENÜ EVENT-HANDLER
+        // ===============================
 
         /// <summary>
-        /// Zeigt die Lieferquellen-Anzeige im Haupt-Content-Bereich
+        /// Zeigt die Lieferquellen-Verwaltung im Hauptbereich an
         /// </summary>
         private void LieferquellenAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Erstellt eine neue Instanz der Lieferquellen-Anzeige
-                var lieferquellenAnzeige = new LieferquellenAnzeigen();
-
-                // Lädt den UserControl in den Haupt-Content-Bereich
-                MainContentArea.Content = lieferquellenAnzeige;
+                var lieferquellenFenster = new LieferquellenAnzeigen();
+                MainContentArea.Content = lieferquellenFenster;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen der Lieferquellen-Anzeige: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Lieferquellen-Verwaltung: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Öffnet das modale Fenster zur Anzeige aller Kostenstellen
+        /// Öffnet das Kostenstellen-Verwaltungsfenster als modales Popup
         /// </summary>
         private void KostenstellenAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var kostenstellenAnzeige = new KostenstellenAnzeigen();
-                kostenstellenAnzeige.Owner = this;
-                kostenstellenAnzeige.ShowDialog();
+                var kostenstellenFenster = new KostenstellenAnzeigen();
+                kostenstellenFenster.Owner = this;
+                kostenstellenFenster.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen des Kostenstellen-Anzeige-Fensters: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Kostenstellen-Verwaltung: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Öffnet das modale Fenster zur Anzeige aller Lagerorte
+        /// Öffnet das Lagerorte-Verwaltungsfenster als modales Popup
         /// </summary>
         private void LagerorteAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var lagerorteAnzeige = new LagerorteAnzeigen();
-                lagerorteAnzeige.Owner = this;
-                lagerorteAnzeige.ShowDialog();
+                var lagerorteFenster = new LagerorteAnzeigen();
+                lagerorteFenster.Owner = this;
+                lagerorteFenster.ShowDialog();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen des Lagerorte-Anzeige-Fensters: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Lagerorte-Verwaltung: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Zeigt die Artikel-Anzeige im Haupt-Content-Bereich
+        /// Zeigt die Artikel-Verwaltung im Hauptbereich an
         /// </summary>
         private void ArtikelAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var artikelAnzeige = new ArtikelAnzeigen();
-                MainContentArea.Content = artikelAnzeige;
+                var artikelFenster = new ArtikelAnzeigen();
+                MainContentArea.Content = artikelFenster;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen der Artikel-Anzeige: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Artikel-Verwaltung: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Zeigt die Lagerbestand-Anzeige im Haupt-Content-Bereich
+        /// Zeigt die Lagerbestand-Übersicht im Hauptbereich an
         /// </summary>
         private void LagerbestandAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Scanner-Events wieder aktivieren falls sie deaktiviert waren
-                if (MainContentArea.Content is StartFenster startFenster)
-                {
-                    startFenster.EnableScannerEvents();
-                }
-
-                var lagerbestandAnzeige = new LagerBestandAnzeigen();
-                MainContentArea.Content = lagerbestandAnzeige;
+                var lagerbestandFenster = new LagerBestandAnzeigen();
+                MainContentArea.Content = lagerbestandFenster;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen der Lagerbestand-Anzeige: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Lagerbestand-Übersicht: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Zeigt die WarnArtikel-Anzeige im Haupt-Content-Bereich (NEU)
+        /// Zeigt die Warnungen-Übersicht im Hauptbereich an
         /// </summary>
         private void WarnungenAnzeigen_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                var warnArtikelAnzeige = new WarnArtikelAnzeigen();
-                MainContentArea.Content = warnArtikelAnzeige;
+                var warnungenFenster = new WarnArtikelAnzeigen();
+                MainContentArea.Content = warnungenFenster;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen der Warnungen-Anzeige: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Warnungen-Übersicht: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         /// <summary>
-        /// Öffnet das modale Fenster zur Anzeige aller E-Mail-Empfänger
+        /// Zeigt die E-Mail-Empfänger-Verwaltung im Hauptbereich an
         /// </summary>
         private void EmpfaengerAnzeigen_Click(object sender, RoutedEventArgs e)
         {
@@ -235,41 +164,48 @@ namespace LAGA
             }
         }
 
+        /// <summary>
+        /// Öffnet das Datenbanksicherung-Einstellungen-Fenster als modales Popup
+        /// </summary>
+        private void DatenbanksicherungEinstellungen_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var backupEinstellungenFenster = new DatenbanksicherungEinstellungen();
+                backupEinstellungenFenster.Owner = this;
+                backupEinstellungenFenster.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Fehler beim Öffnen der Datenbanksicherung-Einstellungen: {ex.Message}",
+                    "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+
+
+        /// <summary>
+        /// Öffnet das Drucker-Einrichtungsfenster als modales Popup
+        /// </summary>
         private void DruckerEinrichten_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // Drucker-Einrichtungs-Fenster erstellen
-                var druckerEinrichtungsFenster = new DruckerEinrichten();
-                druckerEinrichtungsFenster.Owner = this;
+                var druckerFenster = new DruckerEinrichten();
+                druckerFenster.Owner = this;
+                var result = druckerFenster.ShowDialog();
 
-                // Als modaler Dialog anzeigen
-                bool? dialogResult = druckerEinrichtungsFenster.ShowDialog();
-
-                // Prüfen ob Einstellungen gespeichert wurden
-                if (dialogResult == true && druckerEinrichtungsFenster.EinstellungenGespeichert)
+                // Optional: Erfolgsmeldung anzeigen wenn Drucker konfiguriert wurde
+                if (result == true && druckerFenster.EinstellungenGespeichert)
                 {
-                    // Erfolgs-Meldung anzeigen
-                    MessageBox.Show(
-                        $"Drucker '{druckerEinrichtungsFenster.AusgewaehlterDrucker}' wurde erfolgreich als Etikettendrucker eingerichtet.",
-                        "Drucker erfolgreich eingerichtet",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-
-                    System.Diagnostics.Debug.WriteLine($"✅ Drucker eingerichtet: {druckerEinrichtungsFenster.AusgewaehlterDrucker}");
-                }
-                else if (dialogResult == false)
-                {
-                    // Nutzer hat abgebrochen
-                    System.Diagnostics.Debug.WriteLine("ℹ️ Drucker-Einrichtung abgebrochen");
+                    MessageBox.Show($"Drucker '{druckerFenster.AusgewaehlterDrucker}' wurde erfolgreich konfiguriert.",
+                        "Erfolgreich", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen des Drucker-Einrichtungs-Fensters: {ex.Message}",
+                MessageBox.Show($"Fehler beim Öffnen der Drucker-Einrichtung: {ex.Message}",
                     "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                System.Diagnostics.Debug.WriteLine($"❌ Fehler bei Drucker-Einrichtung: {ex.Message}");
             }
         }
     }

@@ -6,6 +6,7 @@ namespace LAGA
     /// <summary>
     /// Zentrale Klasse für die Verwaltung aller Anwendungspfade
     /// Stellt sicher, dass alle Dateien relativ zum Anwendungsverzeichnis gespeichert werden
+    /// Erweitert um Backup- und Einstellungen-Verzeichnisse
     /// </summary>
     public static class PathHelper
     {
@@ -36,6 +37,16 @@ namespace LAGA
         public static string LagerbewegungDirectory => Path.Combine(ApplicationDirectory, "Lagerbewegung");
 
         /// <summary>
+        /// Pfad zum Einstellungen-Ordner für JSON-Konfigurationsdateien
+        /// </summary>
+        public static string EinstellungsDirectory => Path.Combine(ApplicationDirectory, "Einstellungen");
+
+        /// <summary>
+        /// Pfad zum Standard-Backup-Ordner
+        /// </summary>
+        public static string BackupDirectory => Path.Combine(ApplicationDirectory, "Backups");
+
+        /// <summary>
         /// Vollständiger Pfad zur SQLite-Datenbankdatei
         /// </summary>
         public static string DatabaseFilePath => Path.Combine(DatabaseDirectory, "Lager.db");
@@ -53,6 +64,8 @@ namespace LAGA
                 Directory.CreateDirectory(CredentialsDirectory);
                 Directory.CreateDirectory(LogDirectory);
                 Directory.CreateDirectory(LagerbewegungDirectory);
+                Directory.CreateDirectory(EinstellungsDirectory);
+                Directory.CreateDirectory(BackupDirectory);
             }
             catch (Exception ex)
             {
@@ -71,7 +84,9 @@ namespace LAGA
             return Directory.Exists(DatabaseDirectory) &&
                    Directory.Exists(CredentialsDirectory) &&
                    Directory.Exists(LogDirectory) &&
-                   Directory.Exists(LagerbewegungDirectory);
+                   Directory.Exists(LagerbewegungDirectory) &&
+                   Directory.Exists(EinstellungsDirectory) &&
+                   Directory.Exists(BackupDirectory);
         }
 
         /// <summary>
@@ -85,6 +100,8 @@ namespace LAGA
                    $"Credentials-Ordner: {CredentialsDirectory}\n" +
                    $"Log-Ordner: {LogDirectory}\n" +
                    $"Lagerbewegung-Ordner: {LagerbewegungDirectory}\n" +
+                   $"Einstellungen-Ordner: {EinstellungsDirectory}\n" +
+                   $"Backup-Ordner: {BackupDirectory}\n" +
                    $"Datenbankdatei: {DatabaseFilePath}\n" +
                    $"Alle Ordner existieren: {AllDirectoriesExist()}";
         }

@@ -181,8 +181,8 @@ namespace LAGA
         /// </summary>
         private void ShowBarcodeError(string message)
         {
-            MessageBox.Show(message, "Barcode-Fehler",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            CustomMessageBox.Show(message, "Barcode-Fehler", this);
+            SetScannerFocus();
         }
 
         /// <summary>
